@@ -1,19 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { useAuth } from '../contexts/AuthContext';
-import { FaPhone, FaMapMarkerAlt, FaClock, FaStar, FaDirections, FaCalendarAlt, FaShieldAlt, FaHeartbeat } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaDirections, FaCalendarAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
 
 // Set your Mapbox access token here
 // Get your free token from: https://account.mapbox.com/access-tokens/
 mapboxgl.accessToken = 'pk.eyJ1IjoiZGU0ODg5MDQiLCJhIjoiY21lbDNud20wMDdhbjJqczViNHl2d24zMiJ9.RX5l_zsIqNoh4uNK-C6jOg';
 
 const FindClinics = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   
   // Refs
@@ -139,6 +136,20 @@ const FindClinics = () => {
       type: 'Medical Center'
     }
   ];
+
+  // Distance helper (Haversine)
+  function distanceInKm(a, b) {
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLon = Math.sin(dLon / 2);
+    const c = 2 * Math.asin(Math.sqrt(sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon));
+    return R * c;
+  }
 
   // Search for clinics nearby
   const searchClinicsNearby = useCallback(async (lat, lng) => {
@@ -646,6 +657,24 @@ const FindClinics = () => {
       }
     });
   };
+
+  const handleBookNearest = () => {
+    if (!userLocation || clinics.length === 0) return;
+    const userPoint = { lat: userLocation.lat, lng: userLocation.lng };
+    let nearest = null;
+    let minDist = Number.POSITIVE_INFINITY;
+    clinics.forEach(c => {
+      const clinicPoint = { lat: c.coordinates[1], lng: c.coordinates[0] };
+      const d = distanceInKm(userPoint, clinicPoint);
+      if (d < minDist) {
+        minDist = d;
+        nearest = c;
+      }
+    });
+    if (nearest) {
+      handleBookAppointment(nearest);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -720,11 +749,10 @@ const FindClinics = () => {
           </div>
           
           {/* Find Clinics Near Me Button */}
-          <div className="text-center">
+          <div className="text-center space-x-2">
             <button
               onClick={() => {
                 if (userLocation) {
-                  console.log('Searching clinics near user location:', userLocation);
                   searchClinicsNearby(userLocation.lat, userLocation.lng);
                   if (map.current) {
                     map.current.setCenter([userLocation.lng, userLocation.lat]);
@@ -744,8 +772,7 @@ const FindClinics = () => {
                           map.current.setZoom(14);
                         }
                       },
-                      (error) => {
-                        console.log('Geolocation error on button click:', error);
+                      () => {
                         alert('Unable to get your location. Please try searching for a specific area.');
                       }
                     );
@@ -871,7 +898,7 @@ const FindClinics = () => {
               <div className="text-center py-8 text-gray-500">
                 <FaMapMarkerAlt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                 <p>No clinics found in this area</p>
-                <p className="text-sm">Try searching for a different location or click "Find Clinics Near Me"</p>
+                <p className="text-sm">Try searching for a different location or click &quot;Find Clinics Near Me&quot;</p>
               </div>
             ) : (
               <div className="space-y-3">
