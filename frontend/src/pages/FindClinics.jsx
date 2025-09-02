@@ -758,6 +758,32 @@ const FindClinics = () => {
               {loading ? 'Searching...' : 'Find Clinics Near Me'}
             </button>
             
+            {/* Manual Search Buttons for Common Medical Terms */}
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-gray-600">Try searching for specific types:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  { term: 'Arzt', label: '👨‍⚕️ Arzt (Doctor)' },
+                  { term: 'Klinik', label: '🏥 Klinik (Clinic)' },
+                  { term: 'Physiotherapie', label: '💪 Physiotherapie' },
+                  { term: 'Apotheke', label: '💊 Apotheke (Pharmacy)' },
+                  { term: 'Praxis', label: '🏥 Praxis (Practice)' }
+                ].map((searchTerm) => (
+                  <button
+                    key={searchTerm.term}
+                    onClick={() => {
+                      setSearchQuery(searchTerm.term);
+                      handleSearch();
+                    }}
+                    disabled={loading}
+                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 text-sm"
+                  >
+                    {searchTerm.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             {/* Debug button for testing */}
             <button
               onClick={() => {
@@ -765,6 +791,31 @@ const FindClinics = () => {
                 console.log('📍 Current center:', center);
                 console.log('🗺️ Map status:', map.current ? 'Ready' : 'Not ready');
                 console.log('🔍 Map style loaded:', map.current ? map.current.isStyleLoaded() : 'N/A');
+                
+                // Test the Mapbox API directly
+                const testUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/.json?proximity=${center.lng},${center.lat}&types=poi&limit=10&access_token=${mapboxgl.accessToken}`;
+                console.log('🧪 Testing URL:', testUrl);
+                
+                fetch(testUrl)
+                  .then(response => response.json())
+                  .then(data => {
+                    console.log('🧪 Raw Mapbox response:', data);
+                    console.log('🧪 Features found:', data.features ? data.features.length : 0);
+                    if (data.features) {
+                      data.features.forEach((feature, index) => {
+                        console.log(`🧪 Feature ${index + 1}:`, {
+                          text: feature.text,
+                          place_name: feature.place_name,
+                          types: feature.place_type,
+                          properties: feature.properties
+                        });
+                      });
+                    }
+                  })
+                  .catch(error => {
+                    console.error('🧪 Test fetch error:', error);
+                  });
+                
                 searchClinicsNearby(center.lat, center.lng);
               }}
               className="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
