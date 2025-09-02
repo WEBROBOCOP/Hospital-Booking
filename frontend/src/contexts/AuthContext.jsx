@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import axios from 'axios'
 
 const AuthContext = createContext(null)
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: '/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -19,19 +20,29 @@ export function AuthProvider({ children }) {
   // Function to check and restore authentication
   const checkAuth = async () => {
     try {
+      console.log('AuthContext: Starting auth check...')
       const token = localStorage.getItem('token')
+      console.log('AuthContext: Token found:', !!token)
+      
       if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        const response = await api.get('/api/auth/me')
-        setCurrentUser(response.data.data)
+        console.log('AuthContext: Making API call to /auth/me...')
+        const response = await api.get('/auth/me')
+        // Handle both response structures
+        const userData = response.data.data || response.data
+        console.log('AuthContext: User data received:', userData)
+        setCurrentUser(userData)
+      } else {
+        console.log('AuthContext: No token found, setting loading to false')
       }
     } catch (error) {
-      console.error('Auth check error:', error)
+      console.error('AuthContext: Auth check error:', error)
       // If token is invalid, clear it
       localStorage.removeItem('token')
       delete api.defaults.headers.common['Authorization']
       setCurrentUser(null)
     } finally {
+      console.log('AuthContext: Setting loading to false')
       setLoading(false)
     }
   }
@@ -43,11 +54,13 @@ export function AuthProvider({ children }) {
 
   const signup = async (firstName, lastName, email, password) => {
     try {
-      const res = await api.post('/api/auth/register', { firstName, lastName, email, password })
+      const res = await api.post('/auth/register', { firstName, lastName, email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setCurrentUser(res.data.user)
+      // Handle both response structures
+      const userData = res.data.user || res.data.data
+      setCurrentUser(userData)
       return res.data
     } catch (error) {
       console.error('Signup error:', error.response?.data || error.message)
@@ -57,11 +70,14 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const res = await api.post('/api/auth/login', { email, password })
+      const res = await api.post('/auth/login', { email, password })
       const token = res.data.token
       localStorage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      setCurrentUser(res.data.user)
+      // Handle both response structures
+      const userData = res.data.user || res.data.data
+      console.log('Login - user data received:', userData)
+      setCurrentUser(userData)
       return res.data
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message)
@@ -71,7 +87,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post('/api/auth/logout')
+      await api.post('/auth/logout')
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -81,24 +97,42 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = async (updates) => {
     try {
-      const response = await api.put('/api/auth/profile', profileData)
-      setCurrentUser(response.data.data)
-      return response.data
+      console.log('AuthContext: updateProfile called with:', updates)
+      
+      const res = await api.put('/auth/profile', updates)
+      
+      if (res.data.success) {
+        // Update the current user state with the new data
+        const updatedUser = { ...currentUser, ...res.data.user }
+        console.log('AuthContext: Updating user state with:', updatedUser)
+        setCurrentUser(updatedUser)
+        return updatedUser
+      } else {
+        throw new Error('Profile update failed')
+      }
     } catch (error) {
-      console.error('Profile update error:', error.response?.data || error.message)
-      throw error.response?.data || error
+      console.error('Profile update error:', error)
+      // Don't clear the user on profile update errors
+      throw error
     }
+  }
+
+  const changePassword = async (currentPassword, newPassword) => {
+    const res = await api.put('/auth/change-password', { currentPassword, newPassword })
+    return res.data
   }
 
   const value = {
     currentUser,
+    user: currentUser,
     loading,
     signup,
     login,
     logout,
-    updateProfile
+    updateProfile,
+    changePassword
   }
 
   if (loading) {
@@ -114,6 +148,10 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+AuthProvider.propTypes = {
+  children: PropTypes.node
 }
 
 export const useAuth = () => useContext(AuthContext) 
