@@ -14,7 +14,7 @@ import {
   FaSearch
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import FreeMapEmbed from '../components/map/FreeMapEmbed';
+import GoogleMap from '../components/map/GoogleMap';
 
 const FindMedicalFacilities = () => {
   const navigate = useNavigate();
@@ -77,16 +77,41 @@ const FindMedicalFacilities = () => {
     if (!searchQuery.trim()) return;
     
     setLoading(true);
-    // This will be implemented with Google Places API
-    console.log('Searching for:', searchQuery);
-    setLoading(false);
+    // Trigger Google Maps search
+    if (window.mapSearchMethods && window.mapSearchMethods.searchClinics) {
+      window.mapSearchMethods.searchClinics(searchQuery);
+    }
   };
 
   // Search clinics nearby using coordinates
   const searchClinicsNearby = (lat, lng) => {
     setLoading(true);
-    // This will be implemented with Google Places API
-    console.log('Searching clinics near:', lat, lng);
+    // Trigger Google Maps nearby search
+    if (window.mapSearchMethods && window.mapSearchMethods.searchNearby) {
+      window.mapSearchMethods.searchNearby(lat, lng, searchRadius * 1000); // Convert km to meters
+    }
+  };
+
+  // Handle map load
+  const handleMapLoad = (mapInstance, searchMethods) => {
+    setMap(mapInstance);
+    // Store search methods for later use
+    if (searchMethods) {
+      window.mapSearchMethods = searchMethods;
+    }
+  };
+
+  // Handle place selection from map
+  const handlePlaceSelect = (place) => {
+    setSelectedFacility(place);
+    if (place.lat && place.lng) {
+      setCenter({ lat: place.lat, lng: place.lng });
+    }
+  };
+
+  // Handle clinics found
+  const handleClinicsFound = (foundClinics) => {
+    setClinics(foundClinics);
     setLoading(false);
   };
   
@@ -267,10 +292,13 @@ const FindMedicalFacilities = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Map */}
           <div className="lg:col-span-2">
-            <FreeMapEmbed
-              userLocation={userLocation}
-              searchRadius={searchRadius}
-              onLocationSelect={handleFacilitySelect}
+            <GoogleMap
+              center={center}
+              zoom={13}
+              onMapLoad={handleMapLoad}
+              onPlaceSelect={handlePlaceSelect}
+              searchQuery={searchQuery}
+              onClinicsFound={handleClinicsFound}
             />
           </div>
           
