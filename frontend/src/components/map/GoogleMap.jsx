@@ -21,7 +21,7 @@ const GoogleMap = ({
         const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
         
         if (apiKey === 'YOUR_API_KEY_HERE') {
-          console.warn('⚠️ Google Maps API key not configured. Please add REACT_APP_GOOGLE_MAPS_API_KEY to your .env file');
+          console.warn('⚠️ Google Maps API key not configured. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file');
           return;
         }
 
@@ -62,6 +62,15 @@ const GoogleMap = ({
 
       } catch (error) {
         console.error('Error loading Google Maps:', error);
+        
+        // Handle specific Google Maps API errors
+        if (error.message.includes('BillingNotEnabledMapError')) {
+          console.error('❌ Google Maps billing is not enabled. Please enable billing in Google Cloud Console.');
+        } else if (error.message.includes('ApiNotActivatedMapError')) {
+          console.error('❌ Google Maps API is not activated. Please enable Maps JavaScript API and Places API in Google Cloud Console.');
+        } else if (error.message.includes('InvalidKeyMapError')) {
+          console.error('❌ Invalid Google Maps API key. Please check your API key.');
+        }
       }
     };
 
@@ -256,17 +265,30 @@ const GoogleMap = ({
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">🗺️ Google Maps Integration</h3>
           <p className="text-gray-600 mb-4">
-            To enable clinic search functionality, you need to configure your Google Maps API key.
+            To enable clinic search functionality, you need to configure your Google Maps API key and enable billing.
           </p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left mb-4">
+            <h4 className="font-semibold text-red-800 mb-2">⚠️ Current Issues:</h4>
+            <ul className="text-sm text-red-700 space-y-1">
+              <li>• Billing is not enabled on your Google Cloud project</li>
+              <li>• Maps JavaScript API and Places API need to be activated</li>
+            </ul>
+          </div>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
             <h4 className="font-semibold text-yellow-800 mb-2">Setup Instructions:</h4>
             <ol className="text-sm text-yellow-700 space-y-1">
-              <li>1. Get a Google Maps API key from <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
-              <li>2. Enable the following APIs: Maps JavaScript API, Places API</li>
-              <li>3. Create a <code className="bg-yellow-100 px-1 rounded">.env</code> file in the frontend directory</li>
-              <li>4. Add: <code className="bg-yellow-100 px-1 rounded">REACT_APP_GOOGLE_MAPS_API_KEY=your_api_key_here</code></li>
-              <li>5. Restart the development server</li>
+              <li>1. Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
+              <li>2. <strong>Enable billing</strong> and add a payment method</li>
+              <li>3. Enable these APIs: <strong>Maps JavaScript API</strong>, <strong>Places API</strong></li>
+              <li>4. Create a <code className="bg-yellow-100 px-1 rounded">.env</code> file in the frontend directory</li>
+              <li>5. Add: <code className="bg-yellow-100 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY=your_api_key_here</code></li>
+              <li>6. Restart the development server</li>
             </ol>
+            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+              <p className="text-xs text-green-700">
+                💡 <strong>Note:</strong> Google provides $200 free credits monthly for Maps API usage
+              </p>
+            </div>
           </div>
         </div>
       </div>
