@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import GoogleMap from '../components/map/GoogleMap';
+import TestMap from '../components/map/TestMap';
 
 const FindMedicalFacilities = () => {
   const navigate = useNavigate();
@@ -395,6 +396,11 @@ const FindMedicalFacilities = () => {
               searchQuery={searchQuery}
               onClinicsFound={handleClinicsFound}
             />
+            
+            {/* Test Map Component - Remove after billing is fixed */}
+            <div className="mt-4">
+              <TestMap />
+            </div>
           </div>
           
           {/* Instructions */}
