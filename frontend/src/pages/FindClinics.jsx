@@ -24,6 +24,10 @@ const FindMedicalFacilities = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [searchRadius, setSearchRadius] = useState(5); // Default to 5km
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [clinics, setClinics] = useState([]);
+  const [map, setMap] = useState(null);
+  const [center, setCenter] = useState({ lat: 52.5200, lng: 13.4050 }); // Default to Berlin
   
   // Get user location on component mount
   useEffect(() => {
@@ -66,6 +70,24 @@ const FindMedicalFacilities = () => {
 
   const handleFacilitySelect = (facility) => {
     handleBookAppointment(facility);
+  };
+
+  // Handle search functionality
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    
+    setLoading(true);
+    // This will be implemented with Google Places API
+    console.log('Searching for:', searchQuery);
+    setLoading(false);
+  };
+
+  // Search clinics nearby using coordinates
+  const searchClinicsNearby = (lat, lng) => {
+    setLoading(true);
+    // This will be implemented with Google Places API
+    console.log('Searching clinics near:', lat, lng);
+    setLoading(false);
   };
   
   return (
