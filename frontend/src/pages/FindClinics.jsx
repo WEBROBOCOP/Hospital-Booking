@@ -63,17 +63,17 @@ const FindMedicalFacilities = () => {
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions.';
+            errorMessage = 'Location access denied. Please enable location permissions in your browser.';
             status = 'denied';
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information is unavailable.';
+            errorMessage = 'Location information is unavailable. Using default location (Berlin).';
             break;
           case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
+            errorMessage = 'Location request timed out. Using default location (Berlin).';
             break;
           default:
-            errorMessage = 'An unknown error occurred while retrieving location.';
+            errorMessage = 'Location detection failed. Using default location (Berlin).';
             break;
         }
         
@@ -82,9 +82,9 @@ const FindMedicalFacilities = () => {
         setUserLocation({ lat: 52.5200, lng: 13.4050 });
       },
       {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000 // 5 minutes
+        enableHighAccuracy: false, // Changed to false for better compatibility
+        timeout: 10000, // Reduced timeout
+        maximumAge: 60000 // 1 minute
       }
     );
   };
