@@ -18,7 +18,7 @@ const GoogleMap = ({
     const initMap = async () => {
       try {
         // You'll need to add your Google Maps API key here
-        const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
         
         if (apiKey === 'YOUR_API_KEY_HERE') {
           console.warn('⚠️ Google Maps API key not configured. Please add REACT_APP_GOOGLE_MAPS_API_KEY to your .env file');
@@ -235,7 +235,7 @@ const GoogleMap = ({
     }
   }, [map]);
 
-  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
 
   if (apiKey === 'YOUR_API_KEY_HERE') {
     return (

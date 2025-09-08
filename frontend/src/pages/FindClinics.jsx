@@ -28,29 +28,70 @@ const FindMedicalFacilities = () => {
   const [clinics, setClinics] = useState([]);
   const [map, setMap] = useState(null);
   const [center, setCenter] = useState({ lat: 52.5200, lng: 13.4050 }); // Default to Berlin
+  const [locationStatus, setLocationStatus] = useState('detecting'); // 'detecting', 'success', 'error', 'denied'
+  const [locationError, setLocationError] = useState(null);
   
+  // Enhanced location detection with better error handling
+  const detectUserLocation = () => {
+    setLocationStatus('detecting');
+    setLocationError(null);
+
+    if (!navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Geolocation is not supported by this browser');
+      setUserLocation({ lat: 52.5200, lng: 13.4050 });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const location = { lat: latitude, lng: longitude };
+        setUserLocation(location);
+        setCenter(location);
+        setLocationStatus('success');
+        setLocationError(null);
+        
+        // Auto-search for clinics near the user
+        setTimeout(() => {
+          searchClinicsNearby(latitude, longitude);
+        }, 1000);
+      },
+      (error) => {
+        let errorMessage = 'Unable to get your location';
+        let status = 'error';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions.';
+            status = 'denied';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+          default:
+            errorMessage = 'An unknown error occurred while retrieving location.';
+            break;
+        }
+        
+        setLocationStatus(status);
+        setLocationError(errorMessage);
+        setUserLocation({ lat: 52.5200, lng: 13.4050 });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
+  };
+
   // Get user location on component mount
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-        },
-        (error) => {
-          // Use default location (Berlin, Germany)
-          setUserLocation({ lat: 52.5200, lng: 13.4050 });
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        }
-      );
-    } else {
-      // Fallback: use default location
-      setUserLocation({ lat: 52.5200, lng: 13.4050 });
-    }
+    detectUserLocation();
   }, []);
 
   // Book appointment
@@ -109,9 +150,38 @@ const FindMedicalFacilities = () => {
     }
   };
 
-  // Handle clinics found
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
+  };
+
+  // Handle clinics found with distance calculation and sorting
   const handleClinicsFound = (foundClinics) => {
-    setClinics(foundClinics);
+    if (userLocation && foundClinics.length > 0) {
+      // Add distance to each clinic and sort by proximity
+      const clinicsWithDistance = foundClinics.map(clinic => ({
+        ...clinic,
+        distance: calculateDistance(
+          userLocation.lat, 
+          userLocation.lng, 
+          clinic.coordinates.lat, 
+          clinic.coordinates.lng
+        )
+      })).sort((a, b) => a.distance - b.distance);
+
+      setClinics(clinicsWithDistance);
+    } else {
+      setClinics(foundClinics);
+    }
     setLoading(false);
   };
   
@@ -121,22 +191,26 @@ const FindMedicalFacilities = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Find All Medical Facilities
+            Find Medical Facilities Near You
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Discover <span className="font-semibold text-blue-600">hospitals, clinics, doctors, and pharmacies</span> within a <span className="font-semibold text-blue-600">{searchRadius}km radius</span> of your location. 
-            This map is completely <span className="font-semibold text-green-600">FREE</span> and doesn't require any API keys!
+            Get exact distances and book appointments instantly!
           </p>
           
-          {/* Free Map Indicator */}
-          <div className="mt-4 flex justify-center gap-4">
+          {/* Status Indicators */}
+          <div className="mt-4 flex justify-center gap-4 flex-wrap">
             <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm font-medium">100% FREE - No API Key Required</span>
+              <span className="text-sm font-medium">Real-time Location Detection</span>
             </div>
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <span className="text-sm font-medium">Search Radius: {searchRadius}km</span>
+            </div>
+            <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-full">
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              <span className="text-sm font-medium">Instant Booking</span>
             </div>
           </div>
         </div>
@@ -185,41 +259,57 @@ const FindMedicalFacilities = () => {
             </button>
           </div>
           
-          {/* Find Clinics Near Me Button */}
-          <div className="text-center space-x-2">
+          {/* Location Status and Find Clinics Near Me Button */}
+          <div className="text-center space-y-4">
+            {/* Location Status Display */}
+            {locationStatus === 'detecting' && (
+              <div className="flex items-center justify-center gap-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm">Detecting your location...</span>
+              </div>
+            )}
+            
+            {locationStatus === 'success' && (
+              <div className="flex items-center justify-center gap-2 text-green-600">
+                <FaMapMarkerAlt className="h-4 w-4" />
+                <span className="text-sm">Location detected successfully!</span>
+              </div>
+            )}
+            
+            {locationStatus === 'denied' && (
+              <div className="flex items-center justify-center gap-2 text-red-600">
+                <FaMapMarkerAlt className="h-4 w-4" />
+                <span className="text-sm">Location access denied</span>
+              </div>
+            )}
+            
+            {locationStatus === 'error' && (
+              <div className="flex items-center justify-center gap-2 text-red-600">
+                <FaMapMarkerAlt className="h-4 w-4" />
+                <span className="text-sm">Location detection failed</span>
+              </div>
+            )}
+
             <button
               onClick={() => {
-                if (userLocation) {
+                if (userLocation && locationStatus === 'success') {
                   searchClinicsNearby(userLocation.lat, userLocation.lng);
-                  if (map.current) {
-                    map.current.setCenter([userLocation.lng, userLocation.lat]);
-                    map.current.setZoom(14);
+                  if (map && map.setCenter) {
+                    map.setCenter({ lat: userLocation.lat, lng: userLocation.lng });
+                    map.setZoom(14);
                   }
                 } else {
-                  // Try to get location again
-                  if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                      (position) => {
-                        const { latitude, longitude } = position.coords;
-                        setUserLocation({ lat: latitude, lng: longitude });
-                        setCenter({ lat: latitude, lng: longitude });
-                        searchClinicsNearby(latitude, longitude);
-                        if (map.current) {
-                          map.current.setCenter([longitude, latitude]);
-                          map.current.setZoom(14);
-                        }
-                      },
-                      () => {
-                        alert('Unable to get your location. Please try searching for a specific area.');
-                      }
-                    );
-                  }
+                  // Try to detect location again
+                  detectUserLocation();
                 }
               }}
-              disabled={loading}
+              disabled={loading || locationStatus === 'detecting'}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed mr-4"
             >
-              {loading ? 'Searching...' : 'Find Clinics Near Me'}
+              {loading ? 'Searching...' : 
+               locationStatus === 'detecting' ? 'Detecting Location...' :
+               locationStatus === 'success' ? 'Find Clinics Near Me' :
+               'Try Location Again'}
             </button>
             
             {/* Manual Search Buttons for Common Medical Terms */}
@@ -248,47 +338,52 @@ const FindMedicalFacilities = () => {
               </div>
             </div>
             
-            {/* Debug button for testing */}
-            <button
-              onClick={() => {
-                console.log('🧪 Debug: Testing clinic search with default coordinates');
-                console.log('📍 Current center:', center);
-                console.log('🗺️ Map status:', map.current ? 'Ready' : 'Not ready');
-                console.log('🔍 Map style loaded:', map.current ? map.current.isStyleLoaded() : 'N/A');
-                
-                // Test the Mapbox API directly
-                const testUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/.json?proximity=${center.lng},${center.lat}&types=poi&limit=10&access_token=${mapboxgl.accessToken}`;
-                console.log('🧪 Testing URL:', testUrl);
-                
-                fetch(testUrl)
-                  .then(response => response.json())
-                  .then(data => {
-                    console.log('🧪 Raw Mapbox response:', data);
-                    console.log('🧪 Features found:', data.features ? data.features.length : 0);
-                    if (data.features) {
-                      data.features.forEach((feature, index) => {
-                        console.log(`🧪 Feature ${index + 1}:`, {
-                          text: feature.text,
-                          place_name: feature.place_name,
-                          types: feature.place_type,
-                          properties: feature.properties
-                        });
-                      });
-                    }
-                  })
-                  .catch(error => {
-                    console.error('🧪 Test fetch error:', error);
-                  });
-                
-                searchClinicsNearby(center.lat, center.lng);
-              }}
-              className="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
-            >
-              🧪 Test Search
-            </button>
           </div>
         </div>
         
+        {/* Clinic Results */}
+        {clinics.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Found {clinics.length} Medical Facilities
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {clinics.slice(0, 6).map((clinic, index) => (
+                <div key={clinic.place_id || index} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-sm">{clinic.name}</h3>
+                    {clinic.distance && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        {clinic.distance.toFixed(1)} km
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2">{clinic.address}</p>
+                  {clinic.rating && (
+                    <div className="flex items-center gap-1 mb-3">
+                      <FaStar className="h-3 w-3 text-yellow-400" />
+                      <span className="text-xs text-gray-600">
+                        {clinic.rating} ({clinic.user_ratings_total} reviews)
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleBookAppointment(clinic)}
+                    className="w-full bg-blue-600 text-white text-xs py-2 px-3 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Book Appointment
+                  </button>
+                </div>
+              ))}
+            </div>
+            {clinics.length > 6 && (
+              <p className="text-center text-sm text-gray-600 mt-4">
+                Showing first 6 results. Use the map to explore more clinics.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Map */}
           <div className="lg:col-span-2">
