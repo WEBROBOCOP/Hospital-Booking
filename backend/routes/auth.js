@@ -34,6 +34,7 @@ const handleMulterError = (error, req, res, next) => {
 };
 
 const {
+  logout,
   register,
   login,
   getMe,
@@ -58,6 +59,7 @@ router.post('/google', verifyFirebaseToken, googleAuth);
 router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 router.post('/profile/picture', protect, upload.single('file'), handleMulterError, uploadProfilePicture);
+router.post('/logout', protect, logout);
 
 // Google auth routes
 router.get('/google',

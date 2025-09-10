@@ -11,11 +11,13 @@ const FreeMapWithFallback = ({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [debugInfo, setDebugInfo] = useState('');
 
   // Update currentLocation when userLocation prop changes
   useEffect(() => {
     if (userLocation) {
       setCurrentLocation(userLocation);
+      setDebugInfo(`Location updated: ${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`);
     }
   }, [userLocation]);
 
@@ -30,16 +32,19 @@ const FreeMapWithFallback = ({
   useEffect(() => {
     if (!currentLocation && navigator.geolocation) {
       setLoading(true);
+      setDebugInfo('Getting user location...');
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           const location = { lat: latitude, lng: longitude };
           setCurrentLocation(location);
           setLoading(false);
+          setDebugInfo(`Location obtained: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
           console.log('Location obtained:', location);
         },
-        () => {
-          console.log('Using default location (Berlin)');
+        (error) => {
+          console.log('Location error, using default location (Berlin)');
+          setDebugInfo(`Location error: ${error.message}, using default location`);
           const defaultLocation = { lat: 52.5200, lng: 13.4050 };
           setCurrentLocation(defaultLocation);
           setLoading(false);
@@ -52,15 +57,19 @@ const FreeMapWithFallback = ({
       );
     } else if (!currentLocation) {
       setCurrentLocation({ lat: 52.5200, lng: 13.4050 });
+      setDebugInfo('Using default location (Berlin)');
     }
   }, []);
 
   // Generate comprehensive medical facilities
   const generateFacilities = () => {
-    if (!currentLocation) return;
+    if (!currentLocation) {
+      setDebugInfo('No location available for facility generation');
+      return;
+    }
 
     setLoading(true);
-    console.log('Generating facilities for location:', currentLocation, 'radius:', searchRadius);
+    setDebugInfo(`Generating facilities for location: ${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)} with radius: ${searchRadius}km`);
     
     const facilities = [];
     
@@ -142,6 +151,7 @@ const FreeMapWithFallback = ({
     // Sort by distance
     facilities.sort((a, b) => a.distance - b.distance);
     
+    setDebugInfo(`Generated ${facilities.length} facilities within ${searchRadius}km radius`);
     console.log('Generated facilities:', facilities.length, facilities);
     setNearbyFacilities(facilities);
     setLoading(false);
@@ -208,97 +218,92 @@ const FreeMapWithFallback = ({
   // Get type icon
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'hospitals': return <FaHospital className="text-red-600" />;
-      case 'clinics': return <FaHospital className="text-blue-600" />;
-      case 'doctors': return <FaUserMd className="text-purple-600" />;
-      case 'pharmacies': return <FaShieldAlt className="text-green-600" />;
-      default: return <FaMapMarkerAlt className="text-gray-600" />;
+      case 'hospitals':
+        return <FaHospital className="text-red-600" />;
+      case 'clinics':
+        return <FaHospital className="text-blue-600" />;
+      case 'doctors':
+        return <FaUserMd className="text-purple-600" />;
+      case 'pharmacies':
+        return <FaShieldAlt className="text-green-600" />;
+      default:
+        return <FaMapMarkerAlt className="text-gray-600" />;
     }
   };
 
-  // Get facility count by type
-  const getFacilityCounts = () => {
-    const counts = {
-      all: nearbyFacilities.length,
-      hospitals: nearbyFacilities.filter(f => f.type === 'hospitals').length,
-      clinics: nearbyFacilities.filter(f => f.type === 'clinics').length,
-      doctors: nearbyFacilities.filter(f => f.type === 'doctors').length,
-      pharmacies: nearbyFacilities.filter(f => f.type === 'pharmacies').length
-    };
-    return counts;
+  // Get type label
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'hospitals':
+        return 'Hospital';
+      case 'clinics':
+        return 'Clinic';
+      case 'doctors':
+        return 'Doctor';
+      case 'pharmacies':
+        return 'Pharmacy';
+      default:
+        return 'Facility';
+    }
   };
 
-  const facilityCounts = getFacilityCounts();
+  // Generate Google Maps URL with user location
+  const getGoogleMapsUrl = () => {
+    if (!currentLocation) return 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2428.123456789!2d13.4050!3d52.5200!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDLCsDMxJzEyLjAiTiAxM8KwMjQnMTguMCJF!5e0!3m2!1sen!2sde!4v1234567890123!5m2!1sen!2sde&q=medical%20facilities';
+    
+    const lat = currentLocation.lat;
+    const lng = currentLocation.lng;
+    
+    // Create a more dynamic Google Maps embed URL
+    return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2428.123456789!2d${lng}!3d${lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z${Math.abs(lat).toFixed(0)}s${Math.abs(lat * 60 % 60).toFixed(0)}m${Math.abs(lat * 3600 % 60).toFixed(0)}s${lat >= 0 ? 'N' : 'S'}%20${Math.abs(lng).toFixed(0)}s${Math.abs(lng * 60 % 60).toFixed(0)}m${Math.abs(lng * 3600 % 60).toFixed(0)}s${lng >= 0 ? 'E' : 'W'}!5e0!3m2!1sen!2sde!4v1234567890123!5m2!1sen!2sde&q=medical%20facilities`;
+  };
+
+  const filteredFacilities = getFilteredFacilities();
 
   return (
     <div className="space-y-6">
-      {/* Status Indicator */}
-      <div className="bg-white rounded-lg shadow-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-sm font-medium text-blue-700">Free Map with Medical Database</span>
-          </div>
-          <div className="text-sm text-gray-600">
-            Found {facilityCounts.all} facilities within {searchRadius}km
-          </div>
+      {/* Debug information */}
+      {debugInfo && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <p className="text-sm text-yellow-800">
+            <strong>Debug:</strong> {debugInfo}
+          </p>
         </div>
-        {currentLocation && (
-          <div className="text-xs text-gray-500 mt-1">
-            Location: {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Search and Filter Controls */}
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search Input */}
           <div className="flex-1">
             <div className="relative">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search for medical facilities..."
+                placeholder="Search facilities or specialties..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Searching...' : 'Search'}
-          </button>
-        </div>
-
-        {/* Filter Buttons with Counts */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { key: 'all', label: 'All Facilities', icon: <FaMapMarkerAlt /> },
-            { key: 'hospitals', label: 'Hospitals', icon: <FaHospital /> },
-            { key: 'clinics', label: 'Clinics', icon: <FaHospital /> },
-            { key: 'doctors', label: 'Doctors', icon: <FaUserMd /> },
-            { key: 'pharmacies', label: 'Pharmacies', icon: <FaShieldAlt /> }
-          ].map((filter) => (
-            <button
-              key={filter.key}
-              onClick={() => handleFilterChange(filter.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === filter.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {filter.icon}
-              {filter.label}
-              <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs">
-                {facilityCounts[filter.key]}
-              </span>
-            </button>
-          ))}
+          
+          {/* Filter Buttons */}
+          <div className="flex gap-2">
+            {['all', 'hospitals', 'clinics', 'doctors', 'pharmacies'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => handleFilterChange(filter)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedFilter === filter
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -308,7 +313,7 @@ const FreeMapWithFallback = ({
           <div className="bg-white rounded-lg shadow-lg overflow-hidden relative">
             <iframe
               className="w-full h-96"
-              src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2428.123456789!2d${currentLocation?.lng || 13.4050}!3d${currentLocation?.lat || 52.5200}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDLCsDMxJzEyLjAiTiAxM8KwMjQnMTguMCJF!5e0!3m2!1sen!2sde!4v1234567890123!5m2!1sen!2sde&q=medical%20facilities`}
+              src={getGoogleMapsUrl()}
               allowFullScreen=""
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -328,7 +333,7 @@ const FreeMapWithFallback = ({
         <div className="space-y-4">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Nearby Medical Facilities ({getFilteredFacilities().length})
+              Nearby Medical Facilities ({filteredFacilities.length})
             </h3>
             
             {loading ? (
@@ -336,7 +341,7 @@ const FreeMapWithFallback = ({
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
                 <p className="text-gray-600">Searching...</p>
               </div>
-            ) : getFilteredFacilities().length === 0 ? (
+            ) : filteredFacilities.length === 0 ? (
               <div className="text-center py-8">
                 <FaMapMarkerAlt className="text-gray-400 text-3xl mx-auto mb-2" />
                 <p className="text-gray-600">No facilities found in this area</p>
@@ -344,7 +349,7 @@ const FreeMapWithFallback = ({
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {getFilteredFacilities().map((facility) => (
+                {filteredFacilities.map((facility) => (
                   <div
                     key={facility.id}
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -402,12 +407,10 @@ const FreeMapWithFallback = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const directionsUrl = `https://www.google.com/maps/dir/${currentLocation.lat},${currentLocation.lng}/${facility.coordinates.lat},${facility.coordinates.lng}`;
-                          window.open(directionsUrl, '_blank');
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${facility.coordinates.lat},${facility.coordinates.lng}`, '_blank');
                         }}
-                        className="flex items-center gap-1 bg-gray-100 text-gray-700 text-sm py-1 px-3 rounded hover:bg-gray-200 transition-colors"
+                        className="flex-1 bg-gray-600 text-white text-sm py-1 px-3 rounded hover:bg-gray-700 transition-colors"
                       >
-                        <FaDirections />
                         Directions
                       </button>
                     </div>
@@ -415,43 +418,6 @@ const FreeMapWithFallback = ({
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Facility Type Summary */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Facility Summary
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FaHospital className="text-red-600" />
-                  <span className="text-sm font-medium">Hospitals</span>
-                </div>
-                <span className="text-sm text-gray-600">{facilityCounts.hospitals}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FaHospital className="text-blue-600" />
-                  <span className="text-sm font-medium">Clinics</span>
-                </div>
-                <span className="text-sm text-gray-600">{facilityCounts.clinics}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FaUserMd className="text-purple-600" />
-                  <span className="text-sm font-medium">Doctors</span>
-                </div>
-                <span className="text-sm text-gray-600">{facilityCounts.doctors}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FaShieldAlt className="text-green-600" />
-                  <span className="text-sm font-medium">Pharmacies</span>
-                </div>
-                <span className="text-sm text-gray-600">{facilityCounts.pharmacies}</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

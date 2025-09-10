@@ -64,7 +64,9 @@ const BookAppointment = () => {
 
   // Normalize to a booking target
   const bookingTarget = passedDoctor || (passedClinic ? {
-    _id: passedClinic.coordinates ? `${passedClinic.coordinates[0]},${passedClinic.coordinates[1]}` : passedClinic.name,
+    _id: passedClinic.coordinates && passedClinic.coordinates.length >= 2 
+      ? `${passedClinic.coordinates[0]},${passedClinic.coordinates[1]}` 
+      : `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     name: passedClinic.name,
     specialty: passedClinic.specialties ? passedClinic.specialties.join(', ') : 'Clinic Visit',
     address: passedClinic.address,
@@ -163,21 +165,40 @@ const BookAppointment = () => {
     setError(null);
 
     try {
+      // Validate required fields before sending
+      if (!formData.date || !formData.time || !formData.reason) {
+        setError('Please fill in all required fields (date, time, and reason for visit).');
+        setLoading(false);
+        return;
+      }
+
+      if (!bookingTarget || !bookingTarget._id || !bookingTarget.name) {
+        setError('Invalid booking target. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       const appointmentData = {
         doctorId: bookingTarget._id,
-        doctorName: bookingTarget.name,
-        specialty: bookingTarget.specialty,
-        insurance: formData.insurance,
+        doctorName: bookingTarget.name || 'Unknown Clinic',
+        specialty: bookingTarget.specialty || 'General Practice',
+        insurance: formData.insurance || '',
         date: formData.date,
         time: formData.time,
         reason: formData.reason,
-        notes: formData.notes,
-        clinicAddress: bookingTarget.address,
-        clinicType: bookingTarget.type,
-        clinicPhone: bookingTarget.phone,
-        clinicWebsite: bookingTarget.website
+        notes: formData.notes || '',
+        clinicAddress: bookingTarget.address || '',
+        clinicType: bookingTarget.type || 'clinic',
+        clinicPhone: bookingTarget.phone || '',
+        clinicWebsite: bookingTarget.website || '',
+        facilityId: bookingTarget._id,
+        facilityName: bookingTarget.name || 'Unknown Clinic'
       };
 
+      console.log('Sending appointment data:', appointmentData);
+      console.log('Form data:', formData);
+      console.log('Booking target:', bookingTarget);
+      
       const response = await api.post('/appointments', appointmentData);
 
       if (response.data) {
@@ -321,7 +342,6 @@ const BookAppointment = () => {
                 <select
                   id="insurance"
                   name="insurance"
-                  required
                   value={formData.insurance}
                   onChange={handleChange}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-3"

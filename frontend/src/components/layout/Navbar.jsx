@@ -92,6 +92,24 @@ export default function Navbar() {
                   >
                     Find Medical Facilities
                   </Link>
+                  {currentUser?.role === "doctor" && (
+                    <Link
+                      to="/doctor-dashboard"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Doctor Dashboard
+                    </Link>
+                  )}
+                  {currentUser?.role === "admin" && (
+                    <Link
+                      to="/admin-dashboard"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -245,6 +263,24 @@ export default function Navbar() {
                   >
                     Find Medical Facilities
                   </Link>
+                  {currentUser?.role === "doctor" && (
+                    <Link
+                      to="/doctor-dashboard"
+                      className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Doctor Dashboard
+                    </Link>
+                  )}
+                  {currentUser?.role === "admin" && (
+                    <Link
+                      to="/admin-dashboard"
+                      className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link
                     to="/profile"
                     className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"

@@ -8,7 +8,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   doctorId: {
     type: mongoose.Schema.Types.Mixed, // Allow both ObjectId and String
-    ref: 'Doctor',
+    ref: 'User',
     required: true
   },
   doctorName: {
@@ -54,6 +54,14 @@ const appointmentSchema = new mongoose.Schema({
   },
   clinicWebsite: {
     type: String
+  },
+  facilityId: {
+    type: String,
+    required: false
+  },
+  facilityName: {
+    type: String,
+    required: false
   },
   status: {
     type: String,
