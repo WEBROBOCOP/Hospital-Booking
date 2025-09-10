@@ -1,58 +1,86 @@
 const express = require('express');
 const router = express.Router();
-const Appointment = require('../models/Appointment');
 const { protect, authorize } = require('../middleware/auth');
+const Appointment = require('../models/Appointment');
+const User = require('../models/User');
 
-// Helper: Check if date is weekend
-function isWeekend(date) {
+// Helper function to check if a date is a weekend
+const isWeekend = (date) => {
   const day = date.getDay();
-  return day === 0 || day === 6; // Sunday=0, Saturday=6
-}
+  return day === 0 || day === 6; // Sunday = 0, Saturday = 6
+};
 
-// Helper: List of German public holidays (example for 2024, can be improved)
-const GERMAN_PUBLIC_HOLIDAYS_2024 = [
-  '2024-01-01', // New Year's Day
-  '2024-03-29', // Good Friday
-  '2024-04-01', // Easter Monday
-  '2024-05-01', // Labour Day
-  '2024-05-09', // Ascension Day
-  '2024-05-20', // Whit Monday
-  '2024-10-03', // German Unity Day
-  '2024-12-25', // Christmas Day
-  '2024-12-26', // 2nd Christmas Day
-];
-function isGermanHoliday(date) {
-  const d = date.toISOString().slice(0, 10);
-  return GERMAN_PUBLIC_HOLIDAYS_2024.includes(d);
-}
-
-// Helper: Check if time is between 7:00 and 18:00
-function isWithinWorkingHours(time) {
-  const [hour, minute] = time.split(':').map(Number);
-  return (hour > 7 || (hour === 7 && minute >= 0)) && (hour < 18 || (hour === 18 && minute === 0));
-}
-
-// Helper: Parse time string to minutes
-function timeToMinutes(time) {
-  const [hour, minute] = time.split(':').map(Number);
-  return hour * 60 + minute;
-}
-
-// Get all appointments for the authenticated user
+// @desc    Get all appointments for a user
+// @route   GET /api/appointments
+// @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const appointments = await Appointment.find({ userId: req.user.id })
-      .sort({ date: 1 });
-    res.json(appointments);
-  } catch (err) {
-    console.error(err);
+    const { status, date } = req.query;
+    
+    let query = { userId: req.user.id };
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (date) {
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      query.date = { $gte: startDate, $lt: endDate };
+    }
+    
+    const appointments = await Appointment.find(query)
+      .sort({ date: 1, time: 1 });
+
+    // Handle population for valid ObjectIds only
+    const appointmentsWithPopulatedDoctors = await Promise.all(
+      appointments.map(async (appointment) => {
+        const appointmentObj = appointment.toObject();
+        
+        // Only populate if doctorId is a valid MongoDB ObjectId
+        if (appointment.doctorId && appointment.doctorId.match(/^[0-9a-fA-F]{24}$/)) {
+          try {
+            const doctor = await User.findById(appointment.doctorId).select('firstName lastName email specialty');
+            appointmentObj.doctorId = doctor;
+          } catch (err) {
+            // If population fails, keep the original doctorId
+            console.log('Failed to populate doctor:', err.message);
+          }
+        } else {
+          // For clinic IDs, create a virtual doctor object
+          appointmentObj.doctorId = {
+            _id: appointment.doctorId,
+            firstName: appointment.doctorName?.split(' ')[0] || 'Clinic',
+            lastName: appointment.doctorName?.split(' ').slice(1).join(' ') || 'Doctor',
+            email: 'clinic@example.com',
+            specialty: appointment.specialty || 'General Practice'
+          };
+        }
+        
+        return appointmentObj;
+      })
+    );
+    
+    res.status(200).json({
+      success: true,
+      count: appointmentsWithPopulatedDoctors.length,
+      data: appointmentsWithPopulatedDoctors
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Create a new appointment
+// @desc    Create a new appointment
+// @route   POST /api/appointments
+// @access  Private
 router.post('/', protect, async (req, res) => {
   try {
+    console.log('Appointment creation request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID from token:', req.user.id);
+    
     const {
       doctorId,
       doctorName,
@@ -60,43 +88,64 @@ router.post('/', protect, async (req, res) => {
       date,
       time,
       reason,
-      notes
+      notes,
+      clinicAddress,
+      clinicType,
+      clinicPhone,
+      clinicWebsite,
+      facilityId,
+      facilityName
     } = req.body;
 
     const appointmentDate = new Date(date);
     if (isWeekend(appointmentDate)) {
       return res.status(400).json({ message: 'Cannot book appointments on weekends.' });
     }
-    if (isGermanHoliday(appointmentDate)) {
-      return res.status(400).json({ message: 'Cannot book appointments on German public holidays.' });
-    }
-    if (!isWithinWorkingHours(time)) {
-      return res.status(400).json({ message: 'Appointments must be between 07:00 and 18:00.' });
+
+    // Check if the appointment time is in the past
+    const appointmentDateTime = new Date(`${date}T${time}`);
+    if (appointmentDateTime < new Date()) {
+      return res.status(400).json({ message: 'Cannot book appointments in the past.' });
     }
 
-    // Check for 30 min gap for the same doctor (block against pending and confirmed)
-    const existingAppointments = await Appointment.find({
-      doctorId,
-      date: appointmentDate,
-      status: { $in: ['pending', 'confirmed'] }
-    });
-    const requestedTime = timeToMinutes(time);
-    for (const appt of existingAppointments) {
-      const apptTime = timeToMinutes(appt.time);
-      if (Math.abs(apptTime - requestedTime) < 30) {
-        return res.status(409).json({ message: 'There must be at least 30 minutes between appointments for the same doctor.' });
+    // Check if the doctor exists (only for actual doctor bookings)
+    let doctor = null;
+    if (doctorId && doctorId.match(/^[0-9a-fA-F]{24}$/)) {
+      // Valid MongoDB ObjectId - check if it's a real doctor
+      doctor = await User.findById(doctorId);
+      if (!doctor || doctor.role !== 'doctor') {
+        return res.status(400).json({ message: 'Invalid doctor selected.' });
       }
+    } else if (doctorId && doctorId.startsWith('clinic_')) {
+      // For clinic bookings with generated IDs, create a virtual doctor entry
+      doctor = {
+        _id: doctorId,
+        role: 'doctor',
+        firstName: doctorName?.split(' ')[0] || 'Clinic',
+        lastName: doctorName?.split(' ').slice(1).join(' ') || 'Doctor'
+      };
+    } else {
+      // For coordinate-based clinic bookings, create a virtual doctor entry
+      doctor = {
+        _id: doctorId,
+        role: 'doctor',
+        firstName: doctorName?.split(' ')[0] || 'Clinic',
+        lastName: doctorName?.split(' ').slice(1).join(' ') || 'Doctor'
+      };
     }
 
-    // Check for double booking (same doctor, date, time)
-    const existing = await Appointment.findOne({
+    // Check for conflicting appointments
+    const conflictingAppointment = await Appointment.findOne({
       doctorId,
-      date: appointmentDate,
+      date: new Date(date),
       time,
       status: { $in: ['pending', 'confirmed'] }
     });
-    if (existing) {
-      return res.status(409).json({ message: 'This time slot is already booked for this doctor.' });
+
+    if (conflictingAppointment) {
+      return res.status(400).json({ 
+        message: 'This time slot is already booked. Please choose another time.' 
+      });
     }
 
     const appointment = new Appointment({
@@ -104,10 +153,16 @@ router.post('/', protect, async (req, res) => {
       doctorId,
       doctorName,
       specialty,
-      date,
+      date: new Date(date), // Convert string to Date object
       time,
       reason,
-      notes
+      notes,
+      clinicAddress,
+      clinicType,
+      clinicPhone,
+      clinicWebsite,
+      facilityId,
+      facilityName,
       // status defaults to 'pending'
     });
 
@@ -119,47 +174,163 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// Confirm an appointment (doctor or admin)
-router.patch('/:id/confirm', protect, authorize('doctor', 'admin'), async (req, res) => {
+// @desc    Get appointment by ID
+// @route   GET /api/appointments/:id
+// @access  Private
+router.get('/:id', protect, async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.id)
+      .populate('doctorId', 'firstName lastName email specialty');
+
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
-    if (appointment.status !== 'pending') {
-      return res.status(400).json({ message: 'Only pending appointments can be confirmed' });
+
+    // Check if the appointment belongs to the user or if user is doctor/admin
+    if (appointment.userId.toString() !== req.user.id && 
+        !['doctor', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not authorized to view this appointment' });
     }
-    appointment.status = 'confirmed';
-    appointment.confirmedAt = new Date();
+
+    res.status(200).json({
+      success: true,
+      data: appointment
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Update appointment
+// @route   PUT /api/appointments/:id
+// @access  Private
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const { date, time, reason, notes } = req.body;
+
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Check if the appointment belongs to the user
+    if (appointment.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to update this appointment' });
+    }
+
+    // Check if appointment can be updated (not confirmed or completed)
+    if (appointment.status === 'confirmed' || appointment.status === 'completed') {
+      return res.status(400).json({ 
+        message: 'Cannot update confirmed or completed appointments' 
+      });
+    }
+
+    if (date) appointment.date = date;
+    if (time) appointment.time = time;
+    if (reason) appointment.reason = reason;
+    if (notes) appointment.notes = notes;
+
     await appointment.save();
-    res.json(appointment);
+    res.status(200).json(appointment);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Cancel an appointment
+// @desc    Cancel appointment
+// @route   PATCH /api/appointments/:id/cancel
+// @access  Private
 router.patch('/:id/cancel', protect, async (req, res) => {
   try {
-    const appointment = await Appointment.findOne({
-      _id: req.params.id,
-      userId: req.user.id
-    });
+    const { reason } = req.body;
+
+    const appointment = await Appointment.findById(req.params.id);
 
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Check if the appointment belongs to the user
+    if (appointment.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to cancel this appointment' });
+    }
+
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ message: 'Appointment is already cancelled' });
     }
 
     appointment.status = 'cancelled';
     appointment.cancelledAt = new Date();
+    if (reason) {
+      appointment.notes = appointment.notes ? `${appointment.notes}\nCancellation reason: ${reason}` : `Cancellation reason: ${reason}`;
+    }
     await appointment.save();
 
-    res.json(appointment);
+    res.status(200).json(appointment);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-module.exports = router; 
+// @desc    Confirm appointment
+// @route   PATCH /api/appointments/:id/confirm
+// @access  Private (Doctor, Admin)
+router.patch('/:id/confirm', protect, authorize('doctor', 'admin'), async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    if (appointment.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending appointments can be confirmed' });
+    }
+
+    appointment.status = 'confirmed';
+    appointment.confirmedAt = new Date();
+    await appointment.save();
+
+    res.status(200).json(appointment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Delete appointment
+// @route   DELETE /api/appointments/:id
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Check if the appointment belongs to the user
+    if (appointment.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to delete this appointment' });
+    }
+
+    // Check if appointment can be deleted (not confirmed or completed)
+    if (appointment.status === 'confirmed' || appointment.status === 'completed') {
+      return res.status(400).json({ 
+        message: 'Cannot delete confirmed or completed appointments' 
+      });
+    }
+
+    await Appointment.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Appointment deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+module.exports = router;

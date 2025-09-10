@@ -26,14 +26,14 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/appointments');
-        const appointments = response.data;
+        const appointments = response.data.data || [];
         
         // Calculate statistics
         const totalAppointments = appointments.length;
-        const upcomingAppointments = appointments.filter(apt => 
+        const upcomingAppointments = appointments && Array.isArray(appointments) && appointments.filter(apt => 
           new Date(apt.date) > new Date() && apt.status === 'scheduled'
         ).length;
-        const totalSpent = appointments.reduce((sum, apt) => 
+        const totalSpent = appointments && Array.isArray(appointments) && appointments.reduce((sum, apt) => 
           apt.status === 'completed' ? sum + (apt.consultationFee || 0) : sum, 0
         );
 
@@ -50,7 +50,7 @@ const Dashboard = () => {
         setNextAppointment(nextAppt);
 
         // Process recent activity
-        const activities = appointments.map(apt => ({
+        const activities = appointments && Array.isArray(appointments) && appointments.map(apt => ({
           id: apt._id,
           type: apt.status === 'cancelled' ? 'cancellation' : 
                 new Date(apt.date) > new Date() ? 'booking' : 'completion',

@@ -7,8 +7,8 @@ const appointmentSchema = new mongoose.Schema({
     required: true
   },
   doctorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Doctor',
+    type: mongoose.Schema.Types.Mixed, // Allow both ObjectId and String
+    ref: 'User',
     required: true
   },
   doctorName: {
@@ -19,9 +19,14 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  insurance: {
+    type: String,
+    required: false
+  },
   consultationFee: {
     type: Number,
-    required: true
+    required: false,
+    default: 0
   },
   date: {
     type: Date,
@@ -37,6 +42,26 @@ const appointmentSchema = new mongoose.Schema({
   },
   notes: {
     type: String
+  },
+  clinicAddress: {
+    type: String
+  },
+  clinicType: {
+    type: String
+  },
+  clinicPhone: {
+    type: String
+  },
+  clinicWebsite: {
+    type: String
+  },
+  facilityId: {
+    type: String,
+    required: false
+  },
+  facilityName: {
+    type: String,
+    required: false
   },
   status: {
     type: String,
@@ -55,4 +80,4 @@ const appointmentSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Appointment', appointmentSchema); 
+module.exports = mongoose.model('Appointment', appointmentSchema);
