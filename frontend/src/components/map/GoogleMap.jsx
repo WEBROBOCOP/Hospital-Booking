@@ -102,10 +102,10 @@ const GoogleMap = ({
         const clinicResults = [];
 
         results.forEach((place) => {
-          // Filter for medical facilities
+          // Filter for medical facilities - expanded list
           if (place.types.some(type => 
-            ['hospital', 'doctor', 'health', 'pharmacy', 'physiotherapist'].includes(type)
-          )) {
+            ['hospital', 'doctor', 'health', 'pharmacy', 'physiotherapist', 'clinic', 'medical_center', 'dentist', 'veterinary_care', 'health_center', 'general_practitioner', 'specialist', 'urgent_care', 'emergency_room'].includes(type)
+          ) || place.name.toLowerCase().includes('praxis') || place.name.toLowerCase().includes('arztpraxis')) {
             const marker = new window.google.maps.Marker({
               position: place.geometry.location,
               map: map,
@@ -166,75 +166,152 @@ const GoogleMap = ({
   const searchNearby = (lat, lng, radius = 5000) => {
     if (!placesService || !map) return;
 
-    const request = {
+    // Search for multiple types of medical facilities
+    const medicalTypes = ['hospital', 'pharmacy', 'doctor', 'health'];
+    let allResults = [];
+    let completedSearches = 0;
+
+    // Add a specific search for praxis/medical practices
+    const praxisRequest = {
       location: new window.google.maps.LatLng(lat, lng),
       radius: radius,
-      type: 'hospital',
-      keyword: 'clinic doctor medical'
+      keyword: 'praxis arztpraxis medizinische praxis doctor office medical practice'
     };
 
-    placesService.nearbySearch(request, (results, status) => {
+    // Search for praxis first
+    placesService.nearbySearch(praxisRequest, (results, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-        // Clear existing markers
-        markers.forEach(marker => marker.setMap(null));
+        allResults = allResults.concat(results);
+      }
+      completedSearches++;
+      
+      // Process results when all searches are complete
+      if (completedSearches === medicalTypes.length + 1) {
+        processNearbyResults(allResults, lat, lng);
+      }
+    });
+
+    // Then search for other medical types
+    medicalTypes.forEach((type, index) => {
+      const request = {
+        location: new window.google.maps.LatLng(lat, lng),
+        radius: radius,
+        type: type,
+        keyword: 'medical clinic doctor hospital pharmacy praxis arztpraxis medizinische praxis'
+      };
+
+      placesService.nearbySearch(request, (results, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+          allResults = allResults.concat(results);
+        }
         
-        const newMarkers = [];
-        const clinicResults = [];
+        completedSearches++;
+        
+        // Process results when all searches are complete
+        if (completedSearches === medicalTypes.length + 1) {
+          processNearbyResults(allResults, lat, lng);
+        }
+      });
+    });
+  };
 
-        results.forEach((place) => {
-          const marker = new window.google.maps.Marker({
-            position: place.geometry.location,
-            map: map,
-            title: place.name,
-            icon: {
-              url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            }
-          });
+  const processNearbyResults = (results, lat, lng) => {
+    // Remove duplicates based on place_id
+    const uniqueResults = results.filter((place, index, self) => 
+      index === self.findIndex(p => p.place_id === place.place_id)
+    );
 
-          marker.addListener('click', () => {
-            if (onPlaceSelect) {
-              onPlaceSelect({
-                lat: place.geometry.location.lat(),
-                lng: place.geometry.location.lng(),
-                name: place.name,
-                address: place.vicinity,
-                rating: place.rating,
-                user_ratings_total: place.user_ratings_total,
-                place_id: place.place_id
-              });
-            }
-          });
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+    
+    const newMarkers = [];
+    const clinicResults = [];
 
-          newMarkers.push(marker);
-          clinicResults.push({
+    uniqueResults.forEach((place) => {
+      // Determine marker color based on facility type
+      let iconColor = 'blue';
+      if (place.types) {
+        if (place.types.includes('hospital')) iconColor = 'red';
+        else if (place.types.includes('pharmacy')) iconColor = 'green';
+        else if (place.types.includes('doctor')) iconColor = 'purple';
+      }
+
+      const marker = new window.google.maps.Marker({
+        position: place.geometry.location,
+        map: map,
+        title: place.name,
+        icon: {
+          url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`
+        }
+      });
+
+      marker.addListener('click', () => {
+        if (onPlaceSelect) {
+          onPlaceSelect({
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
             name: place.name,
-            address: place.vicinity,
-            coordinates: {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng()
-            },
+            address: place.vicinity || place.formatted_address,
             rating: place.rating,
             user_ratings_total: place.user_ratings_total,
             place_id: place.place_id
           });
-        });
-
-        setMarkers(newMarkers);
-        
-        if (onClinicsFound) {
-          onClinicsFound(clinicResults);
         }
+      });
 
-        // Fit map to show all results
-        if (clinicResults.length > 0) {
-          const bounds = new window.google.maps.LatLngBounds();
-          clinicResults.forEach(clinic => {
-            bounds.extend(clinic.coordinates);
-          });
-          map.fitBounds(bounds);
-        }
+      newMarkers.push(marker);
+
+      // Determine facility type for display
+      let facilityType = 'Medical Facility';
+      if (place.types) {
+        if (place.types.includes('hospital')) facilityType = 'Hospital';
+        else if (place.types.includes('pharmacy')) facilityType = 'Pharmacy';
+        else if (place.types.includes('doctor')) facilityType = 'Doctor';
+        else if (place.types.includes('clinic')) facilityType = 'Clinic';
+        else if (place.types.includes('medical_center')) facilityType = 'Medical Center';
+        else if (place.types.includes('health')) facilityType = 'Health Center';
       }
+      
+      // Check name for praxis-specific terms
+      if (place.name && (
+        place.name.toLowerCase().includes('praxis') ||
+        place.name.toLowerCase().includes('arztpraxis') ||
+        place.name.toLowerCase().includes('medizinische') ||
+        place.name.toLowerCase().includes('doctor office') ||
+        place.name.toLowerCase().includes('medical practice')
+      )) {
+        facilityType = 'Praxis';
+      }
+
+      clinicResults.push({
+        name: place.name,
+        address: place.vicinity || place.formatted_address,
+        coordinates: {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng()
+        },
+        rating: place.rating,
+        user_ratings_total: place.user_ratings_total,
+        place_id: place.place_id,
+        type: facilityType,
+        types: place.types || []
+      });
     });
+
+    setMarkers(newMarkers);
+
+    if (onClinicsFound) {
+      onClinicsFound(clinicResults);
+    }
+
+    // Fit map to show all results
+    if (clinicResults.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      clinicResults.forEach(clinic => {
+        bounds.extend(clinic.coordinates);
+      });
+      map.fitBounds(bounds);
+    }
   };
 
   // Expose search methods
@@ -245,6 +322,9 @@ const GoogleMap = ({
   }, [map]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE';
+
+  // Debug: Log the API key (first 10 characters for security)
+  console.log('Google Maps API Key loaded:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
 
   if (apiKey === 'YOUR_API_KEY_HERE') {
     return (
