@@ -1,231 +1,261 @@
+// Import React hooks for state management and side effects
 import { useState, useEffect } from 'react';
+// Import Font Awesome icons for UI elements
 import { 
-  FaMapMarkerAlt, 
-  FaStar, 
-  FaPhone,
-  FaSearch,
-  FaHospital,
-  FaUserMd,
-  FaShieldAlt
+  FaShieldAlt,  // Shield icon for pharmacies
+  FaUserMd,     // User doctor icon for doctors
+  FaHospital,   // Hospital icon for hospitals and clinics
+  FaMapMarkerAlt, // Map marker icon
+  FaExclamationTriangle, // Warning icon
+  FaCheckCircle, // Success icon
+  FaSpinner, // Loading spinner
 } from 'react-icons/fa';
+// Import React Router hook for navigation
 import { useNavigate } from 'react-router-dom';
-import GoogleMap from '../components/map/GoogleMap';
-import MapDiagnostic from '../components/map/MapDiagnostic';
+// Import the map component that handles medical facility display
+import FreeMapWithFallback from '../components/map/FreeMapWithFallback';
 
-const FindClinics = () => {
+// Main component for finding medical facilities
+const FindMedicalFacilities = () => {
+  // Initialize navigation hook for programmatic routing
   const navigate = useNavigate();
   
-  // State
-  const [loading, setLoading] = useState(false);
+  // State management for component data
+  // State to store user's current location coordinates
   const [userLocation, setUserLocation] = useState(null);
+  // State to store search radius in kilometers (default 5km)
   const [searchRadius, setSearchRadius] = useState(5);
-  const [clinics, setClinics] = useState([]);
-  const [map, setMap] = useState(null);
-  const [center, setCenter] = useState({ lat: 52.5200, lng: 13.4050 });
-  const [locationStatus, setLocationStatus] = useState('detecting');
+  // State for location detection status
+  const [locationStatus, setLocationStatus] = useState('detecting'); // 'detecting', 'success', 'error', 'denied'
+  // State for location accuracy
+  const [locationAccuracy, setLocationAccuracy] = useState(null);
+  // State for debugging
+  const [debugInfo, setDebugInfo] = useState('');
+  
+  // Effect hook to get user's location when component mounts
+  useEffect(() => {
+    detectUserLocation();
+  }, []); // Empty dependency array means this runs only once on mount
 
-  // Get user location
+  // Enhanced location detection function
   const detectUserLocation = () => {
     setLocationStatus('detecting');
+    setDebugInfo('Starting location detection...');
     
+    // Check if browser supports geolocation API
     if (!navigator.geolocation) {
       setLocationStatus('error');
+      setDebugInfo('Geolocation not supported by browser');
       setUserLocation({ lat: 52.5200, lng: 13.4050 });
       return;
     }
 
+    setDebugInfo('Requesting location permission...');
+
+    // Request user's current position with enhanced options
     navigator.geolocation.getCurrentPosition(
+      // Success callback - when location is obtained
       (position) => {
-        const { latitude, longitude } = position.coords;
-        const location = { lat: latitude, lng: longitude };
-        setUserLocation(location);
-        setCenter(location);
-        setLocationStatus('success');
+        const { latitude, longitude, accuracy } = position.coords;
         
-        // Auto-search for clinics
-        setTimeout(() => {
-          searchClinicsNearby(latitude, longitude);
-        }, 1000);
+        // Update state with user's coordinates and accuracy
+        setUserLocation({ lat: latitude, lng: longitude });
+        setLocationAccuracy(accuracy);
+        setLocationStatus('success');
+        setDebugInfo(`Location obtained: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (accuracy: ±${Math.round(accuracy)}m)`);
+        
+        console.log('Location obtained:', { lat: latitude, lng: longitude, accuracy });
       },
+      // Error callback - when location access is denied or fails
       (error) => {
-        setLocationStatus('error');
+        console.error('Location error:', error);
+        setDebugInfo(`Location error: ${error.message}`);
+        
+        // Handle different error types
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationStatus('denied');
+            setDebugInfo('Location access denied by user');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationStatus('error');
+            setDebugInfo('Location information unavailable');
+            break;
+          case error.TIMEOUT:
+            setLocationStatus('error');
+            setDebugInfo('Location request timed out');
+            break;
+          default:
+            setLocationStatus('error');
+            setDebugInfo('Unknown location error');
+        }
+        
+        // Use default location (Berlin, Germany) as fallback
         setUserLocation({ lat: 52.5200, lng: 13.4050 });
+        setDebugInfo(prev => prev + ' - Using default location (Berlin)');
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      // Enhanced geolocation options for better accuracy and performance
+      {
+        enableHighAccuracy: true,  // Use GPS for better accuracy
+        timeout: 15000,           // Wait max 15 seconds for location
+        maximumAge: 60000         // Cache location for 1 minute
+      }
     );
   };
 
-  useEffect(() => {
-    detectUserLocation();
-  }, []);
-
-  // Search function
-  const searchClinicsNearby = (lat, lng) => {
-    setLoading(true);
-    if (window.mapSearchMethods && window.mapSearchMethods.searchNearby) {
-      window.mapSearchMethods.searchNearby(lat, lng, searchRadius * 1000);
-    }
-  };
-
-  const handleMapLoad = (mapInstance, searchMethods) => {
-    setMap(mapInstance);
-    if (searchMethods) {
-      window.mapSearchMethods = searchMethods;
-    }
-  };
-
-  const handlePlaceSelect = (place) => {
-    if (place.lat && place.lng) {
-      setCenter({ lat: place.lat, lng: place.lng });
-    }
-  };
-
-  // Calculate distance
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
-
-  const handleClinicsFound = (foundClinics) => {
-    if (userLocation && foundClinics.length > 0) {
-      const clinicsWithDistance = foundClinics.map(clinic => ({
-        ...clinic,
-        distance: calculateDistance(
-          userLocation.lat, 
-          userLocation.lng, 
-          clinic.coordinates.lat, 
-          clinic.coordinates.lng
-        )
-      })).sort((a, b) => a.distance - b.distance);
-      setClinics(clinicsWithDistance);
-    } else {
-      setClinics(foundClinics);
-    }
-    setLoading(false);
-  };
-
-  // Book appointment
+  // Function to handle appointment booking navigation
   const handleBookAppointment = (facility) => {
+    // Navigate to booking page with facility data
     navigate('/book', { 
+      // Pass facility information as state to booking page
       state: { 
-        clinicName: facility.name,
-        clinicAddress: facility.address,
-        clinicCoordinates: facility.coordinates,
-        clinicType: facility.type,
-        clinicPhone: facility.phone,
-        clinicWebsite: facility.website,
-        clinicSpecialties: facility.specialties
+        clinicName: facility.name,           // Facility name
+        clinicAddress: facility.address,     // Facility address
+        clinicCoordinates: facility.coordinates, // GPS coordinates
+        clinicType: facility.type,           // Type (hospital, clinic, etc.)
+        clinicPhone: facility.phone,         // Contact phone number
+        clinicWebsite: facility.website,     // Website URL
+        clinicSpecialties: facility.specialties // Medical specialties
       }
     });
   };
 
+  // Function to handle facility selection from map component
+  const handleFacilitySelect = (facility) => {
+    // Call appointment booking function with selected facility
+    handleBookAppointment(facility);
+  };
+
+  // Function to retry location detection
+  const retryLocationDetection = () => {
+    setLocationStatus('detecting');
+    setDebugInfo('Retrying location detection...');
+    detectUserLocation();
+  };
+
+  // Get location status icon and color
+  const getLocationStatusDisplay = () => {
+    switch (locationStatus) {
+      case 'detecting':
+        return { icon: FaSpinner, color: 'text-blue-600', bg: 'bg-blue-50', text: 'Detecting your location...' };
+      case 'success':
+        return { icon: FaCheckCircle, color: 'text-green-600', bg: 'bg-green-50', text: 'Location detected successfully' };
+      case 'denied':
+        return { icon: FaExclamationTriangle, color: 'text-red-600', bg: 'bg-red-50', text: 'Location access denied' };
+      case 'error':
+        return { icon: FaExclamationTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50', text: 'Location detection failed' };
+      default:
+        return { icon: FaMapMarkerAlt, color: 'text-gray-600', bg: 'bg-gray-50', text: 'Location unknown' };
+    }
+  };
+
+  const statusDisplay = getLocationStatusDisplay();
+  const StatusIcon = statusDisplay.icon;
+  
+  // Main component render
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Header */}
+    // Main container with full height and gray background
+    <div className="min-h-screen bg-gray-50 py-8">
+      {/* Container with max width and responsive padding */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header section with title and description */}
         <div className="text-center mb-8">
+          {/* Main page title */}
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Medical Facilities Near You
           </h1>
-          <p className="text-lg text-gray-600">
-            Hospitals, clinics, doctors, and pharmacies in your area
-          </p>
         </div>
-
-        {/* Diagnostic Component */}
-        <MapDiagnostic />
-
-        {/* Loading Status */}
-        {locationStatus === 'detecting' && (
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 text-blue-600">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="text-lg">Finding medical facilities near you...</span>
+        
+        {/* Search radius selector section */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="mb-4 text-center">
+            {/* Label for radius selector */}
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Radius
+            </label>
+            {/* Button group for radius selection */}
+            <div className="flex justify-center gap-2">
+              {/* Map through radius options to create buttons */}
+              {[1, 3, 5, 10, 15].map((radius) => (
+                <button
+                  key={radius} // Unique key for React list rendering
+                  onClick={() => setSearchRadius(radius)} // Update radius state on click
+                  // Conditional styling based on selected radius
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    searchRadius === radius
+                      ? 'bg-blue-600 text-white shadow-md' // Selected state
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200' // Default state
+                  }`}
+                >
+                  {radius}km {/* Display radius value */}
+                </button>
+              ))}
             </div>
           </div>
-        )}
-
-        {/* Results Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        </div>
+        
+        {/* Main content - full width map */}
+        <div className="w-full">
+          {/* Map component with enhanced props */}
+          <FreeMapWithFallback
+            userLocation={userLocation}        // Pass user's location
+            searchRadius={searchRadius}        // Pass search radius
+            onLocationSelect={handleFacilitySelect} // Pass selection handler
+          />
+        </div>
+        
+        {/* Features grid section at bottom of page */}
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Hospitals feature card */}
+          <div className="text-center">
+            <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <FaHospital className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Find Hospitals
+            </h3>
+            <p className="text-gray-600">
+              Locate hospitals and emergency care facilities near you
+            </p>
+          </div>
           
-          {/* Map */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <GoogleMap
-                center={center}
-                zoom={13}
-                onMapLoad={handleMapLoad}
-                onPlaceSelect={handlePlaceSelect}
-                onClinicsFound={handleClinicsFound}
-              />
+          {/* Clinics feature card */}
+          <div className="text-center">
+            <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <FaHospital className="h-8 w-8 text-blue-600" />
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Find Clinics
+            </h3>
+            <p className="text-gray-600">
+              Discover medical clinics and urgent care centers
+            </p>
           </div>
-
-          {/* Results List */}
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {clinics.length > 0 ? `Found ${clinics.length} Facilities` : 'Search Results'}
-              </h2>
-              
-              {clinics.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {clinics.map((clinic, index) => (
-                    <div key={clinic.place_id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 text-sm">{clinic.name}</h3>
-                          {clinic.type && (
-                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full mt-1 inline-block">
-                              {clinic.type}
-                            </span>
-                          )}
-                        </div>
-                        {clinic.distance && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full ml-2">
-                            {clinic.distance.toFixed(1)} km
-                          </span>
-                        )}
-                      </div>
-                      
-                      <p className="text-xs text-gray-600 mb-2">{clinic.address}</p>
-                      
-                      {clinic.rating && (
-                        <div className="flex items-center gap-1 mb-3">
-                          <FaStar className="h-3 w-3 text-yellow-400" />
-                          <span className="text-xs text-gray-600">
-                            {clinic.rating} ({clinic.user_ratings_total} reviews)
-                          </span>
-                        </div>
-                      )}
-                      
-                      <button
-                        onClick={() => handleBookAppointment(clinic)}
-                        className="w-full bg-blue-600 text-white text-xs py-2 px-3 rounded hover:bg-blue-700 transition-colors"
-                      >
-                        Book Appointment
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FaSearch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No facilities found</h3>
-                  <p className="text-gray-600">
-                    {loading ? 'Searching...' : 'Use the search above or click "Find Near Me" to find medical facilities.'}
-                  </p>
-                </div>
-              )}
+          
+          {/* Doctors feature card */}
+          <div className="text-center">
+            <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <FaUserMd className="h-8 w-8 text-purple-600" />
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Find Doctors
+            </h3>
+            <p className="text-gray-600">
+              Search for specialists and private practice doctors
+            </p>
+          </div>
+          
+          {/* Pharmacies feature card */}
+          <div className="text-center">
+            <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <FaShieldAlt className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Find Pharmacies
+            </h3>
+            <p className="text-gray-600">
+              Locate pharmacies for prescriptions and health products
+            </p>
           </div>
         </div>
       </div>
@@ -233,4 +263,5 @@ const FindClinics = () => {
   );
 };
 
-export default FindClinics;
+// Export the component as default for use in other files
+export default FindMedicalFacilities;
