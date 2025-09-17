@@ -154,42 +154,113 @@ const FindMedicalFacilities = () => {
   
   // Main component render
   return (
-    // Main container with full height and gray background
-    <div className="min-h-screen bg-gray-50 py-8">
+    // Main container with full height and gradient background
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
       {/* Container with max width and responsive padding */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header section with title and description */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           {/* Main page title */}
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Find All Medical Facilities
+          <h1 className="text-responsive-3xl font-bold text-gray-900 mb-4">
+            Medical Facilities Near You
           </h1>
+          <p className="text-responsive-base text-gray-600 max-w-2xl mx-auto">
+            Discover healthcare providers in your area and book appointments with ease
+          </p>
         </div>
         
-        {/* Search radius selector section */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="mb-4 text-center">
+        {/* Enhanced Search radius selector section */}
+        <div className="max-w-5xl mx-auto mb-8 animate-slide-up">
+          <div className="mb-6 text-center">
             {/* Label for radius selector */}
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search Radius
+            <label className="block text-sm font-medium text-gray-700 mb-6">
+              How far are you willing to travel?
             </label>
-            {/* Button group for radius selection */}
-            <div className="flex justify-center gap-2">
-              {/* Map through radius options to create buttons */}
-              {[1, 3, 5, 10, 15].map((radius) => (
-                <button
-                  key={radius} // Unique key for React list rendering
-                  onClick={() => setSearchRadius(radius)} // Update radius state on click
-                  // Conditional styling based on selected radius
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    searchRadius === radius
-                      ? 'bg-blue-600 text-white shadow-md' // Selected state
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200' // Default state
-                  }`}
-                >
-                  {radius}km {/* Display radius value */}
-                </button>
-              ))}
+            
+            {/* Creative radius selection options */}
+            <div className="space-y-6">
+              {/* Option 1: Slider with visual indicators */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-gray-600">Distance Range</span>
+                  <span className="text-lg font-bold text-blue-600">{searchRadius} km</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="1"
+                    max="25"
+                    value={searchRadius}
+                    onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${(searchRadius / 25) * 100}%, #E5E7EB ${(searchRadius / 25) * 100}%, #E5E7EB 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>1km</span>
+                    <span>5km</span>
+                    <span>10km</span>
+                    <span>15km</span>
+                    <span>25km</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option 2: Distance-based preset buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { value: 1, label: 'Nearby', desc: '1km', color: 'green' },
+                  { value: 3, label: 'Close', desc: '3km', color: 'blue' },
+                  { value: 5, label: 'Moderate', desc: '5km', color: 'yellow' },
+                  { value: 10, label: 'Far', desc: '10km', color: 'orange' },
+                  { value: 15, label: 'Very Far', desc: '15km+', color: 'red' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setSearchRadius(option.value)}
+                    className={`group relative p-4 rounded-xl text-center transition-all duration-200 transform hover:scale-105 ${
+                      searchRadius === option.value
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg scale-105' 
+                        : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600 shadow-md hover:shadow-lg'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${
+                      option.color === 'green' ? 'bg-green-500' :
+                      option.color === 'blue' ? 'bg-blue-500' :
+                      option.color === 'yellow' ? 'bg-yellow-500' :
+                      option.color === 'orange' ? 'bg-orange-500' :
+                      'bg-red-500'
+                    }`}></div>
+                    <div className="text-sm font-medium">{option.label}</div>
+                    <div className="text-xs opacity-75">{option.desc}</div>
+                    {searchRadius === option.value && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full"></div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Option 3: Visual distance indicators */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Search Coverage</h3>
+                  <p className="text-sm text-gray-600">Your search will cover this area</p>
+                </div>
+                <div className="flex items-center justify-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-gray-600">Your location</span>
+                  </div>
+                  <div className="flex-1 h-1 bg-gradient-to-r from-blue-500 to-blue-200 rounded-full relative">
+                    <div 
+                      className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min((searchRadius / 15) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">{searchRadius}km radius</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -205,55 +276,55 @@ const FindMedicalFacilities = () => {
         </div>
         
         {/* Features grid section at bottom of page */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Hospitals feature card */}
-          <div className="text-center">
-            <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="card-hover text-center group animate-slide-up">
+            <div className="bg-gradient-to-br from-red-100 to-red-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
               <FaHospital className="h-8 w-8 text-red-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-red-600 transition-colors duration-200">
               Find Hospitals
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-responsive-sm">
               Locate hospitals and emergency care facilities near you
             </p>
           </div>
           
           {/* Clinics feature card */}
-          <div className="text-center">
-            <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="card-hover text-center group animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
               <FaHospital className="h-8 w-8 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
               Find Clinics
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-responsive-sm">
               Discover medical clinics and urgent care centers
             </p>
           </div>
           
           {/* Doctors feature card */}
-          <div className="text-center">
-            <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="card-hover text-center group animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
               <FaUserMd className="h-8 w-8 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors duration-200">
               Find Doctors
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-responsive-sm">
               Search for specialists and private practice doctors
             </p>
           </div>
           
           {/* Pharmacies feature card */}
-          <div className="text-center">
-            <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <div className="card-hover text-center group animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
               <FaShieldAlt className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-green-600 transition-colors duration-200">
               Find Pharmacies
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-responsive-sm">
               Locate pharmacies for prescriptions and health products
             </p>
           </div>

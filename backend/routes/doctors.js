@@ -5,12 +5,12 @@ const Appointment = require('../models/Appointment');
 const MedicalRecord = require('../models/MedicalRecord');
 const User = require('../models/User');
 
-// @desc    Get all appointments for a specific doctor (filtered by facility)
+// @desc    Get all appointments for a doctor's facility (all doctors in same facility can see all facility appointments)
 // @route   GET /api/doctors/appointments
 // @access  Private (Doctor)
 router.get('/appointments', protect, authorize('doctor'), async (req, res) => {
   try {
-    const { status, date } = req.query;
+    const { status, date, doctorId } = req.query;
     
     // First, get the doctor's facility information
     const doctor = await User.findById(req.user.id).select('facility');
@@ -18,14 +18,25 @@ router.get('/appointments', protect, authorize('doctor'), async (req, res) => {
       return res.status(404).json({ message: 'Doctor not found' });
     }
     
-    // Build query to filter appointments by doctor
+    // If doctor has no facility assigned, return empty results
+    if (!doctor.facility || !doctor.facility.name) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
+        doctorFacility: null,
+        message: 'No facility assigned. Please contact administrator.'
+      });
+    }
+    
+    // Build query to filter appointments by facility (all appointments in the facility)
     let query = { 
-      doctorId: req.user.id
+      facilityName: doctor.facility.name
     };
     
-    // If doctor has a facility, filter by facility name
-    if (doctor.facility && doctor.facility.name) {
-      query.facilityName = doctor.facility.name;
+    // Optional: Filter by specific doctor if requested
+    if (doctorId) {
+      query.doctorId = doctorId;
     }
     
     if (status) {
@@ -41,6 +52,7 @@ router.get('/appointments', protect, authorize('doctor'), async (req, res) => {
     
     const appointments = await Appointment.find(query)
       .populate('userId', 'firstName lastName email phone')
+      .populate('doctorId', 'firstName lastName email specialty')
       .sort({ date: 1, time: 1 });
     
     res.status(200).json({
@@ -55,7 +67,7 @@ router.get('/appointments', protect, authorize('doctor'), async (req, res) => {
   }
 });
 
-// @desc    Get appointment details for doctor (with facility check)
+// @desc    Get appointment details for doctor (with facility check - any doctor in facility can view)
 // @route   GET /api/doctors/appointments/:id
 // @access  Private (Doctor)
 router.get('/appointments/:id', protect, authorize('doctor'), async (req, res) => {
@@ -67,18 +79,14 @@ router.get('/appointments/:id', protect, authorize('doctor'), async (req, res) =
     }
     
     const appointment = await Appointment.findById(req.params.id)
-      .populate('userId', 'firstName lastName email phone dateOfBirth gender bloodGroup medicalHistory allergies');
+      .populate('userId', 'firstName lastName email phone dateOfBirth gender bloodGroup medicalHistory allergies')
+      .populate('doctorId', 'firstName lastName email specialty');
     
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Verify this appointment belongs to the doctor
-    if (appointment.doctorId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to view this appointment' });
-    }
-    
-    // Verify this appointment is from the doctor's facility
+    // Verify this appointment is from the doctor's facility (any doctor in facility can view)
     if (doctor.facility && doctor.facility.name && 
         appointment.facilityName !== doctor.facility.name) {
       return res.status(403).json({ 
@@ -96,7 +104,7 @@ router.get('/appointments/:id', protect, authorize('doctor'), async (req, res) =
   }
 });
 
-// @desc    Confirm appointment (with facility check)
+// @desc    Confirm appointment (with facility check - any doctor in facility can manage)
 // @route   PATCH /api/doctors/appointments/:id/confirm
 // @access  Private (Doctor)
 router.patch('/appointments/:id/confirm', protect, authorize('doctor'), async (req, res) => {
@@ -113,12 +121,7 @@ router.patch('/appointments/:id/confirm', protect, authorize('doctor'), async (r
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Verify this appointment belongs to the doctor
-    if (appointment.doctorId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to confirm this appointment' });
-    }
-    
-    // Verify this appointment is from the doctor's facility
+    // Verify this appointment is from the doctor's facility (any doctor in facility can manage)
     if (doctor.facility && doctor.facility.name && 
         appointment.facilityName !== doctor.facility.name) {
       return res.status(403).json({ 
@@ -144,7 +147,7 @@ router.patch('/appointments/:id/confirm', protect, authorize('doctor'), async (r
   }
 });
 
-// @desc    Cancel appointment (with facility check)
+// @desc    Cancel appointment (with facility check - any doctor in facility can manage)
 // @route   PATCH /api/doctors/appointments/:id/cancel
 // @access  Private (Doctor)
 router.patch('/appointments/:id/cancel', protect, authorize('doctor'), async (req, res) => {
@@ -163,12 +166,7 @@ router.patch('/appointments/:id/cancel', protect, authorize('doctor'), async (re
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Verify this appointment belongs to the doctor
-    if (appointment.doctorId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to cancel this appointment' });
-    }
-    
-    // Verify this appointment is from the doctor's facility
+    // Verify this appointment is from the doctor's facility (any doctor in facility can manage)
     if (doctor.facility && doctor.facility.name && 
         appointment.facilityName !== doctor.facility.name) {
       return res.status(403).json({ 
@@ -197,7 +195,7 @@ router.patch('/appointments/:id/cancel', protect, authorize('doctor'), async (re
   }
 });
 
-// @desc    Complete appointment (with facility check)
+// @desc    Complete appointment (with facility check - any doctor in facility can manage)
 // @route   PATCH /api/doctors/appointments/:id/complete
 // @access  Private (Doctor)
 router.patch('/appointments/:id/complete', protect, authorize('doctor'), async (req, res) => {
@@ -214,12 +212,7 @@ router.patch('/appointments/:id/complete', protect, authorize('doctor'), async (
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Verify this appointment belongs to the doctor
-    if (appointment.doctorId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to complete this appointment' });
-    }
-    
-    // Verify this appointment is from the doctor's facility
+    // Verify this appointment is from the doctor's facility (any doctor in facility can manage)
     if (doctor.facility && doctor.facility.name && 
         appointment.facilityName !== doctor.facility.name) {
       return res.status(403).json({ 

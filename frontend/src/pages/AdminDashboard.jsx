@@ -175,27 +175,30 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner h-12 w-12 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-responsive-base">Loading admin dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage users, appointments, and system settings</p>
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-responsive-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-2 text-responsive-base text-gray-600">Manage users, appointments, and system settings</p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow mb-8">
+        <div className="card mb-8 animate-slide-up">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex flex-wrap space-x-8 px-6">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
                   activeTab === 'dashboard'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -206,7 +209,7 @@ const AdminDashboard = () => {
               </button>
               <button
                 onClick={() => setActiveTab('users')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
                   activeTab === 'users'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -217,7 +220,7 @@ const AdminDashboard = () => {
               </button>
               <button
                 onClick={() => setActiveTab('appointments')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
                   activeTab === 'appointments'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -231,7 +234,7 @@ const AdminDashboard = () => {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 animate-fade-in">
             {error}
           </div>
         )}
@@ -240,10 +243,10 @@ const AdminDashboard = () => {
         {activeTab === 'dashboard' && stats && (
           <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="card-hover group animate-slide-up">
                 <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl group-hover:scale-110 transition-transform duration-200">
                     <FaUsers className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
@@ -253,9 +256,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="card-hover group animate-slide-up" style={{ animationDelay: '0.1s' }}>
                 <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-green-100 to-green-200 rounded-xl group-hover:scale-110 transition-transform duration-200">
                     <FaUserInjured className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="ml-4">
@@ -265,9 +268,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="card-hover group animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl group-hover:scale-110 transition-transform duration-200">
                     <FaUserMd className="w-6 h-6 text-purple-600" />
                   </div>
                   <div className="ml-4">
@@ -277,9 +280,9 @@ const AdminDashboard = () => {
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="card-hover group animate-slide-up" style={{ animationDelay: '0.3s' }}>
                 <div className="flex items-center">
-                  <div className="p-2 bg-red-100 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-red-100 to-red-200 rounded-xl group-hover:scale-110 transition-transform duration-200">
                     <FaShieldAlt className="w-6 h-6 text-red-600" />
                   </div>
                   <div className="ml-4">
@@ -406,89 +409,95 @@ const AdminDashboard = () => {
 
             {/* Users Table */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facility</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map((user) => (
-                    <tr key={user._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                          className={`text-sm font-medium rounded-full px-2 py-1 ${
-                            user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                            user.role === 'doctor' ? 'bg-purple-100 text-purple-800' :
-                            'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          <option value="patient">Patient</option>
-                          <option value="doctor">Doctor</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format(new Date(user.createdAt), 'MMM dd, yyyy')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.role === "doctor" ? (
-                          user.facility?.name ? (
-                            <div>
-                              <div className="font-medium">{user.facility.name}</div>
-                              <div className="text-xs text-gray-400">{user.facility.type}</div>
-                            </div>
-                          ) : (
-                            <span className="text-red-500 text-xs">No facility assigned</span>
-                          )
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleImpersonate(user._id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Impersonate User"
-                        >
-                          <FaEye className="w-4 h-4" />
-                        </button>
-                        {user.role === "doctor" && (
-                          <button
-                            onClick={() => handleFacilityClick(user)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Assign Facility"
-                          >
-                            <FaHospital className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteUser(user._id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete User"
-                        >
-                          <FaTrash className="w-4 h-4" />
-                        </button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Role</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Created</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Facility</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredUsers.map((user) => (
+                      <tr key={user._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap w-1/6">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+                          <div className="truncate max-w-xs" title={user.email}>
+                            {user.email}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap w-1/6">
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                            className={`text-xs font-medium rounded-full px-2 py-1 w-full ${
+                              user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                              user.role === 'doctor' ? 'bg-purple-100 text-purple-800' :
+                              'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            <option value="patient">Patient</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+                          {format(new Date(user.createdAt), 'MMM dd, yyyy')}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 w-1/6">
+                          {user.role === "doctor" ? (
+                            user.facility?.name ? (
+                              <div className="truncate max-w-xs">
+                                <div className="font-medium text-xs">{user.facility.name}</div>
+                                <div className="text-xs text-gray-400">{user.facility.type}</div>
+                              </div>
+                            ) : (
+                              <span className="text-red-500 text-xs">No facility assigned</span>
+                            )
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium w-1/6">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleImpersonate(user._id)}
+                              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-100"
+                              title="Impersonate User"
+                            >
+                              <FaEye className="w-4 h-4" />
+                            </button>
+                            {user.role === "doctor" && (
+                              <button
+                                onClick={() => handleFacilityClick(user)}
+                                className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-100"
+                                title="Assign Facility"
+                              >
+                                <FaHospital className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-100"
+                              title="Delete User"
+                            >
+                              <FaTrash className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

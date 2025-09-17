@@ -332,8 +332,6 @@ router.post('/impersonate/:id', protect, authorize('admin'), async (req, res) =>
   }
 });
 
-module.exports = router;
-
 // @desc    Update doctor's facility information
 // @route   PATCH /api/admin/doctors/:id/facility
 // @access  Private (Admin)
@@ -404,4 +402,6 @@ router.get('/doctors', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+module.exports = router;
 
