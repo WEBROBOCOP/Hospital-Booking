@@ -25,6 +25,7 @@ const DoctorDashboard = () => {
   const [medicalHistory, setMedicalHistory] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('');
+  const [filterDoctor, setFilterDoctor] = useState('all');
   const [facilityInfo, setFacilityInfo] = useState(null);
   const { currentUser } = useAuth();
 
@@ -42,7 +43,7 @@ const DoctorDashboard = () => {
       fetchAppointments();
       fetchFacilityInfo();
     }
-  }, [currentUser, filterStatus, filterDate]);
+  }, [currentUser, filterStatus, filterDate, filterDoctor]);
 
   const fetchAppointments = async () => {
     try {
@@ -55,6 +56,9 @@ const DoctorDashboard = () => {
       }
       if (filterDate) {
         queryParams += queryParams ? `&date=${filterDate}` : `?date=${filterDate}`;
+      }
+      if (filterDoctor !== 'all') {
+        queryParams += queryParams ? `&doctorId=${filterDoctor}` : `?doctorId=${filterDoctor}`;
       }
 
       const response = await api.get(`/doctors/appointments${queryParams}`);
@@ -144,6 +148,7 @@ const DoctorDashboard = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
+          <p className="mt-2 text-gray-600">View and manage all appointments in your facility</p>
           {!facilityInfo?.facility?.name && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
               <div className="flex items-center">
@@ -160,8 +165,9 @@ const DoctorDashboard = () => {
               <div className="flex items-center">
                 <FaUser className="w-5 h-5 mr-2" />
                 <div>
-                  <strong>Assigned to: {facilityInfo.facility.name}</strong>
+                  <strong>Facility: {facilityInfo.facility.name}</strong>
                   <p className="text-sm">{facilityInfo.facility.address} - {facilityInfo.facility.type}</p>
+                  <p className="text-xs mt-1">You can view and manage all appointments in this facility</p>
                 </div>
               </div>
             </div>
@@ -170,7 +176,7 @@ const DoctorDashboard = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
               <select
@@ -194,13 +200,32 @@ const DoctorDashboard = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Doctor</label>
+              <select
+                value={filterDoctor}
+                onChange={(e) => setFilterDoctor(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Doctors</option>
+                {Array.from(new Set(appointments.map(apt => apt.doctorId?._id).filter(Boolean))).map(doctorId => {
+                  const appointment = appointments.find(apt => apt.doctorId?._id === doctorId);
+                  return (
+                    <option key={doctorId} value={doctorId}>
+                      {appointment?.doctorId?.firstName} {appointment?.doctorId?.lastName}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Appointments List */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Appointments</h2>
+            <h2 className="text-lg font-medium text-gray-900">All Facility Appointments</h2>
+            <p className="text-sm text-gray-600 mt-1">View and manage appointments from all doctors in your facility</p>
           </div>
           
           {error && (
@@ -229,7 +254,7 @@ const DoctorDashboard = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
                             <p className="text-sm font-medium text-gray-900 truncate">
-                              {appointment.userName}
+                              {appointment.userId?.firstName} {appointment.userId?.lastName}
                             </p>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
                               {getStatusIcon(appointment.status)}
@@ -254,11 +279,18 @@ const DoctorDashboard = () => {
                               <strong>Reason:</strong> {appointment.reason}
                             </p>
                           )}
-                          {appointment.facilityName && (
-                            <p className="mt-1 text-sm text-gray-600">
-                              <strong>Facility:</strong> {appointment.facilityName}
-                            </p>
-                          )}
+                          <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                            {appointment.facilityName && (
+                              <div>
+                                <strong>Facility:</strong> {appointment.facilityName}
+                              </div>
+                            )}
+                            {appointment.doctorId && (
+                              <div>
+                                <strong>Assigned Doctor:</strong> {appointment.doctorId.firstName} {appointment.doctorId.lastName}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

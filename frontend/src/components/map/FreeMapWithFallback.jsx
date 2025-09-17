@@ -151,7 +151,8 @@ const FreeMapWithFallback = ({
     // Sort by distance
     facilities.sort((a, b) => a.distance - b.distance);
     
-    setDebugInfo(`Generated ${facilities.length} facilities within ${searchRadius}km radius`);
+    // Remove debug info for production
+    // setDebugInfo(`Generated ${facilities.length} facilities within ${searchRadius}km radius`);
     console.log('Generated facilities:', facilities.length, facilities);
     setNearbyFacilities(facilities);
     setLoading(false);
@@ -262,14 +263,14 @@ const FreeMapWithFallback = ({
 
   return (
     <div className="space-y-6">
-      {/* Debug information */}
-      {debugInfo && (
+      {/* Debug information - removed for production */}
+      {/* {debugInfo && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <p className="text-sm text-yellow-800">
             <strong>Debug:</strong> {debugInfo}
           </p>
         </div>
-      )}
+      )} */}
 
       {/* Search and Filter Controls */}
       <div className="bg-white rounded-lg shadow-lg p-6">

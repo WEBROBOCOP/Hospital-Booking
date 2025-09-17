@@ -1,8 +1,6 @@
-const admin = require('firebase-admin');
-const serviceAccount = require('../serviceAccountKey.json');
+// Firebase Admin is no longer used in this project
+// This file is kept for compatibility but exports null
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+console.log('ℹ️ Firebase Admin is disabled - not using Firebase services');
 
-module.exports = admin; 
+module.exports = null; 
