@@ -40,6 +40,11 @@ const UserSchema = new mongoose.Schema({
     enum: ['patient', 'doctor', 'admin'],
     default: 'patient'
   },
+  // Patient-specific fields
+  assignedDoctor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   // Doctor-specific fields
   facility: {
     name: String,
