@@ -27,6 +27,8 @@ const DoctorDashboard = () => {
   const [filterDate, setFilterDate] = useState('');
   const [filterDoctor, setFilterDoctor] = useState('all');
   const [facilityInfo, setFacilityInfo] = useState(null);
+  const [assignedPatients, setAssignedPatients] = useState([]);
+  const [activeTab, setActiveTab] = useState('appointments');
   const { currentUser } = useAuth();
 
   const fetchFacilityInfo = async () => {
@@ -38,10 +40,20 @@ const DoctorDashboard = () => {
     }
   };
 
+  const fetchAssignedPatients = async () => {
+    try {
+      const response = await api.get(`/admin/doctors/${currentUser.id}/patients`);
+      setAssignedPatients(response.data.data);
+    } catch (err) {
+      console.error("Error fetching assigned patients:", err);
+    }
+  };
+
   useEffect(() => {
     if (currentUser && currentUser.role === 'doctor') {
       fetchAppointments();
       fetchFacilityInfo();
+      fetchAssignedPatients();
     }
   }, [currentUser, filterStatus, filterDate, filterDoctor]);
 
@@ -174,7 +186,40 @@ const DoctorDashboard = () => {
           )}
         </div>
 
-        {/* Filters */}
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('appointments')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'appointments'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FaCalendarAlt className="inline w-4 h-4 mr-2" />
+                Appointments
+              </button>
+              <button
+                onClick={() => setActiveTab('patients')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'patients'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FaUser className="inline w-4 h-4 mr-2" />
+                My Patients ({assignedPatients.length})
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Appointments Tab */}
+        {activeTab === 'appointments' && (
+          <>
+            {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -405,6 +450,105 @@ const DoctorDashboard = () => {
                 </form>
               </div>
             </div>
+          </div>
+          </>
+        )}
+
+        {/* Patients Tab */}
+        {activeTab === 'patients' && (
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-medium text-gray-900">My Assigned Patients</h2>
+              <p className="text-sm text-gray-600 mt-1">Patients assigned to you for care</p>
+            </div>
+            
+            {assignedPatients.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <FaUser className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No patients assigned</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  You don't have any patients assigned to you yet. Contact your administrator.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Patient
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Contact
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Medical Info
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {assignedPatients.map((patient) => (
+                      <tr key={patient._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <FaUser className="h-5 w-5 text-blue-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {patient.firstName} {patient.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Patient ID: {patient._id.slice(-8)}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{patient.email}</div>
+                          <div className="text-sm text-gray-500">{patient.phone || 'No phone'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {patient.bloodGroup ? `Blood Group: ${patient.bloodGroup}` : 'No blood group info'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Allergies: {patient.allergies?.length || 0}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => {
+                              setMedicalHistory(patient.medicalHistory || []);
+                              setShowMedicalHistory(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 mr-4"
+                          >
+                            <FaHistory className="inline w-4 h-4 mr-1" />
+                            History
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedAppointment({ userId: patient._id });
+                              setShowPrescriptionForm(true);
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            <FaPrescriptionBottle className="inline w-4 h-4 mr-1" />
+                            Prescribe
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

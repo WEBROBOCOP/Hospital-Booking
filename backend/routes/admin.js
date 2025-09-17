@@ -403,5 +403,237 @@ router.get('/doctors', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// @desc    Assign doctor to patient
+// @route   POST /api/admin/assign-doctor
+// @access  Private (Admin)
+router.post('/assign-doctor', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { patientId, doctorId } = req.body;
+    
+    // Validate required fields
+    if (!patientId || !doctorId) {
+      return res.status(400).json({ message: 'Patient ID and Doctor ID are required' });
+    }
+    
+    // Check if patient exists
+    const patient = await User.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+    
+    // Check if doctor exists
+    const doctor = await User.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    
+    if (doctor.role !== 'doctor') {
+      return res.status(400).json({ message: 'User is not a doctor' });
+    }
+    
+    // Update patient's assigned doctor
+    patient.assignedDoctor = doctorId;
+    await patient.save();
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        patient: {
+          id: patient._id,
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          email: patient.email,
+          assignedDoctor: patient.assignedDoctor
+        },
+        doctor: {
+          id: doctor._id,
+          firstName: doctor.firstName,
+          lastName: doctor.lastName,
+          email: doctor.email,
+          facility: doctor.facility
+        }
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Get patients assigned to a doctor
+// @route   GET /api/admin/doctors/:doctorId/patients
+// @access  Private (Admin)
+router.get('/doctors/:doctorId/patients', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    
+    // Check if doctor exists
+    const doctor = await User.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    
+    if (doctor.role !== 'doctor') {
+      return res.status(400).json({ message: 'User is not a doctor' });
+    }
+    
+    // Get all patients assigned to this doctor
+    const patients = await User.find({ 
+      assignedDoctor: doctorId,
+      role: 'patient'
+    }).select('-password');
+    
+    res.status(200).json({
+      success: true,
+      count: patients.length,
+      data: patients
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @desc    Get available medical facilities for doctor assignment
+// @route   GET /api/admin/facilities
+// @access  Private (Admin)
+router.get('/facilities', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { lat, lng, radius = 25, type, search } = req.query;
+    
+    // Default coordinates (Berlin) if not provided
+    const defaultLat = 52.5200;
+    const defaultLng = 13.4050;
+    
+    const centerLat = lat ? parseFloat(lat) : defaultLat;
+    const centerLng = lng ? parseFloat(lng) : defaultLng;
+    const searchRadius = parseInt(radius);
+    
+    // Generate comprehensive medical facilities (same logic as frontend)
+    const facilities = [];
+    
+    // Hospital facilities
+    const hospitals = [
+      { name: 'City General Hospital', specialties: ['Emergency Care', 'Surgery', 'Cardiology'] },
+      { name: 'Regional Medical Center', specialties: ['Intensive Care', 'Neurology', 'Oncology'] },
+      { name: 'University Hospital', specialties: ['Research', 'Specialized Care', 'Teaching'] },
+      { name: 'Community Hospital', specialties: ['General Medicine', 'Emergency Care', 'Surgery'] },
+      { name: 'Metro Health Center', specialties: ['Emergency Care', 'Trauma', 'Critical Care'] },
+      { name: 'St. Mary\'s Hospital', specialties: ['Maternity', 'Pediatrics', 'Women\'s Health'] },
+      { name: 'Children\'s Medical Center', specialties: ['Pediatrics', 'Child Surgery', 'Neonatology'] }
+    ];
+
+    // Clinic facilities
+    const clinics = [
+      { name: 'Family Health Clinic', specialties: ['General Practice', 'Family Medicine', 'Pediatrics'] },
+      { name: 'Urgent Care Center', specialties: ['Urgent Care', 'Walk-in Clinic', 'Minor Injuries'] },
+      { name: 'Community Health Center', specialties: ['Primary Care', 'Preventive Medicine', 'Health Education'] },
+      { name: 'Medical Group Practice', specialties: ['Internal Medicine', 'Family Practice', 'Preventive Care'] },
+      { name: 'Wellness Medical Clinic', specialties: ['Preventive Care', 'Health Screening', 'Wellness'] },
+      { name: 'Specialty Care Clinic', specialties: ['Specialist Care', 'Consultation', 'Advanced Treatment'] },
+      { name: 'Multi-Specialty Center', specialties: ['Multiple Specialties', 'Comprehensive Care', 'Diagnostics'] }
+    ];
+
+    // Doctor facilities
+    const doctors = [
+      { name: 'Dr. Smith Medical Practice', specialties: ['Internal Medicine', 'Consultation', 'Preventive Care'] },
+      { name: 'Specialist Medical Group', specialties: ['Specialist Consultation', 'Private Practice', 'Telemedicine'] },
+      { name: 'Health & Wellness Clinic', specialties: ['Holistic Medicine', 'Wellness', 'Alternative Care'] },
+      { name: 'Dr. Johnson Family Practice', specialties: ['Family Medicine', 'General Practice', 'Preventive Care'] },
+      { name: 'Dr. Williams Specialist Center', specialties: ['Specialist Care', 'Consultation', 'Advanced Treatment'] },
+      { name: 'Dr. Brown Cardiology Clinic', specialties: ['Cardiology', 'Heart Care', 'Cardiovascular Surgery'] },
+      { name: 'Dr. Davis Orthopedic Center', specialties: ['Orthopedics', 'Sports Medicine', 'Physical Therapy'] }
+    ];
+
+    // Pharmacy facilities
+    const pharmacies = [
+      { name: 'City Pharmacy', specialties: ['Prescriptions', 'Over-the-counter', 'Health Products'] },
+      { name: '24/7 Medical Pharmacy', specialties: ['Emergency Prescriptions', 'Consultation', 'Vaccinations'] },
+      { name: 'Community Drugstore', specialties: ['Prescriptions', 'Health Advice', 'Medical Supplies'] },
+      { name: 'Health Plus Pharmacy', specialties: ['Prescriptions', 'Health Products', 'Consultation'] },
+      { name: 'Metro Pharmacy', specialties: ['Prescriptions', 'Health Screening', 'Medical Equipment'] }
+    ];
+
+    // Generate facilities with realistic coordinates
+    const facilityTypes = [
+      { type: 'hospital', data: hospitals, color: '#DC2626' },
+      { type: 'clinic', data: clinics, color: '#2563EB' },
+      { type: 'medical_center', data: doctors, color: '#7C3AED' },
+      { type: 'private_practice', data: doctors.slice(0, 3), color: '#7C3AED' }
+    ];
+
+    // Helper function to calculate distance between two coordinates
+    const calculateDistance = (lat1, lng1, lat2, lng2) => {
+      const R = 6371; // Earth's radius in kilometers
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    };
+
+    facilityTypes.forEach(({ type, data, color }) => {
+      data.forEach((facility, index) => {
+        // Generate realistic coordinates around the center location
+        const offsetLat = (Math.random() - 0.5) * 0.02; // ~1km variation
+        const offsetLng = (Math.random() - 0.5) * 0.02;
+        
+        const facilityLat = centerLat + offsetLat;
+        const facilityLng = centerLng + offsetLng;
+        
+        const distance = calculateDistance(centerLat, centerLng, facilityLat, facilityLng);
+        
+        // Only include facilities within search radius
+        if (distance <= searchRadius) {
+          const facilityData = {
+            id: `${type}_${index}`,
+            name: facility.name,
+            address: `${Math.floor(Math.random() * 999) + 1} Main St, City, State ${Math.floor(Math.random() * 90000) + 10000}`,
+            coordinates: { lat: facilityLat, lng: facilityLng },
+            rating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0 rating
+            userRatingsTotal: Math.floor(Math.random() * 200) + 10,
+            type: type,
+            phone: `+1-555-${Math.floor(Math.random() * 9000) + 1000}`,
+            website: `https://${facility.name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')}.com`,
+            specialties: facility.specialties,
+            distance: Math.round(distance * 10) / 10, // Round to 1 decimal place
+            color: color
+          };
+          
+          // Apply type filter if specified
+          if (!type || facilityData.type === type) {
+            facilities.push(facilityData);
+          }
+        }
+      });
+    });
+
+    // Apply search filter if specified
+    let filteredFacilities = facilities;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredFacilities = facilities.filter(facility => 
+        facility.name.toLowerCase().includes(searchLower) ||
+        facility.address.toLowerCase().includes(searchLower) ||
+        facility.specialties.some(specialty => specialty.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Sort by distance
+    filteredFacilities.sort((a, b) => a.distance - b.distance);
+    
+    res.status(200).json({
+      success: true,
+      count: filteredFacilities.length,
+      data: filteredFacilities
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
 
