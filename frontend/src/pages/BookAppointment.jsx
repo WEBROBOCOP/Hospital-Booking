@@ -64,7 +64,9 @@ const BookAppointment = () => {
 
   // Normalize to a booking target
   const bookingTarget = passedDoctor || (passedClinic ? {
-    _id: passedClinic.coordinates ? `${passedClinic.coordinates[0]},${passedClinic.coordinates[1]}` : passedClinic.name,
+    _id: passedClinic.coordinates && passedClinic.coordinates.length >= 2 
+      ? `${passedClinic.coordinates[0]},${passedClinic.coordinates[1]}` 
+      : `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     name: passedClinic.name,
     specialty: passedClinic.specialties ? passedClinic.specialties.join(', ') : 'Clinic Visit',
     address: passedClinic.address,
@@ -126,11 +128,11 @@ const BookAppointment = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
+            <div className="spinner h-12 w-12 mx-auto"></div>
+            <p className="mt-4 text-gray-600 text-responsive-base">Loading appointment booking...</p>
           </div>
         </div>
       </div>
@@ -163,21 +165,40 @@ const BookAppointment = () => {
     setError(null);
 
     try {
+      // Validate required fields before sending
+      if (!formData.date || !formData.time || !formData.reason) {
+        setError('Please fill in all required fields (date, time, and reason for visit).');
+        setLoading(false);
+        return;
+      }
+
+      if (!bookingTarget || !bookingTarget._id || !bookingTarget.name) {
+        setError('Invalid booking target. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       const appointmentData = {
         doctorId: bookingTarget._id,
-        doctorName: bookingTarget.name,
-        specialty: bookingTarget.specialty,
-        insurance: formData.insurance,
+        doctorName: bookingTarget.name || 'Unknown Clinic',
+        specialty: bookingTarget.specialty || 'General Practice',
+        insurance: formData.insurance || '',
         date: formData.date,
         time: formData.time,
         reason: formData.reason,
-        notes: formData.notes,
-        clinicAddress: bookingTarget.address,
-        clinicType: bookingTarget.type,
-        clinicPhone: bookingTarget.phone,
-        clinicWebsite: bookingTarget.website
+        notes: formData.notes || '',
+        clinicAddress: bookingTarget.address || '',
+        clinicType: bookingTarget.type || 'clinic',
+        clinicPhone: bookingTarget.phone || '',
+        clinicWebsite: bookingTarget.website || '',
+        facilityId: bookingTarget._id,
+        facilityName: bookingTarget.name || 'Unknown Clinic'
       };
 
+      console.log('Sending appointment data:', appointmentData);
+      console.log('Form data:', formData);
+      console.log('Booking target:', bookingTarget);
+      
       const response = await api.post('/appointments', appointmentData);
 
       if (response.data) {
@@ -213,23 +234,25 @@ const BookAppointment = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Book Your Appointment</h1>
-          <p className="text-lg text-gray-600">Schedule your visit with confidence</p>
+        <div className="text-center mb-8 animate-fade-in">
+          <h1 className="text-responsive-3xl font-bold text-gray-900 mb-2">Book Your Appointment</h1>
+          <p className="text-responsive-base text-gray-600">Schedule your visit with confidence</p>
         </div>
 
         {/* Clinic Information Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="card-hover mb-8 animate-slide-up">
           <div className="flex items-start gap-4 mb-4">
-            {getClinicIcon(bookingTarget.type)}
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl">
+              {getClinicIcon(bookingTarget.type)}
+            </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{bookingTarget.name}</h2>
               <p className="text-lg text-blue-600 mb-2">{bookingTarget.specialty}</p>
               {bookingTarget.type && (
-                <span className="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full mb-3">
+                <span className="badge-info">
                   {bookingTarget.type}
                 </span>
               )}
@@ -302,10 +325,10 @@ const BookAppointment = () => {
         </div>
 
         {/* Booking Form */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="card animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Appointment Details</h2>
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-fade-in">
               <p className="text-red-600">{error}</p>
             </div>
           )}
@@ -321,7 +344,6 @@ const BookAppointment = () => {
                 <select
                   id="insurance"
                   name="insurance"
-                  required
                   value={formData.insurance}
                   onChange={handleChange}
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-3"

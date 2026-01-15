@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StatCard = ({ title, value, icon, change, changeType = 'neutral' }) => {
+const StatCard = ({ title, value, icon, change, changeType = 'neutral', className = '' }) => {
   const getChangeColor = () => {
     switch (changeType) {
       case 'positive':
@@ -24,11 +24,11 @@ const StatCard = ({ title, value, icon, change, changeType = 'neutral' }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className={`card group hover:shadow-lg transition-all duration-300 ${className}`}>
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
+          <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
           {change && (
             <div className={`flex items-center text-sm ${getChangeColor()}`}>
               <span className="mr-1">{getChangeIcon()}</span>
@@ -37,8 +37,10 @@ const StatCard = ({ title, value, icon, change, changeType = 'neutral' }) => {
           )}
         </div>
         {icon && (
-          <div className="p-3 bg-blue-100 rounded-full">
-            {icon}
+          <div className="p-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl group-hover:scale-110 transition-transform duration-200">
+            <div className="text-blue-600">
+              {icon}
+            </div>
           </div>
         )}
       </div>

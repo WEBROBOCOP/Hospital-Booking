@@ -28,7 +28,7 @@ const Appointments = () => {
       setLoading(true);
       setError(null);
       const response = await api.get('/appointments');
-      setAppointments(response.data);
+      setAppointments(response.data.data || []);
     } catch (err) {
       console.error('Error fetching appointments:', err);
       setError('Failed to load appointments. Please try again.');
@@ -131,7 +131,7 @@ const Appointments = () => {
     );
   }
 
-  if (appointments.length === 0) {
+  if (appointments && Array.isArray(appointments) && appointments.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -178,7 +178,7 @@ const Appointments = () => {
         )}
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {appointments.map((appointment) => (
+          {appointments && Array.isArray(appointments) && appointments.map((appointment) => (
             <div
               key={appointment._id}
               className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"

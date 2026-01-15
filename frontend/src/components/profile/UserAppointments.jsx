@@ -14,7 +14,7 @@ function UserAppointments() {
         setLoading(true)
         setError('')
         const res = await api.get('/appointments')
-        setAppointments(res.data)
+        setAppointments(res.data.data || [])
       } catch (err) {
         console.error('Error fetching appointments:', err)
         setError(err.response?.data?.message || 'Failed to load appointments')
@@ -40,11 +40,11 @@ function UserAppointments() {
       {error && (
         <p className="mb-4 text-sm text-red-600">{error}</p>
       )}
-      {appointments.length === 0 ? (
+      {appointments && Array.isArray(appointments) && appointments.length === 0 ? (
         <p className="text-gray-600">No appointments scheduled yet.</p>
       ) : (
         <div className="space-y-4">
-          {appointments.map(appointment => (
+          {appointments && Array.isArray(appointments) && appointments.map(appointment => (
             <div 
               key={appointment._id || appointment.id} 
               className="bg-white rounded-lg shadow-sm p-4 border border-gray-200"

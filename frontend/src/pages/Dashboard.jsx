@@ -26,14 +26,14 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/appointments');
-        const appointments = response.data;
+        const appointments = response.data.data || [];
         
         // Calculate statistics
         const totalAppointments = appointments.length;
-        const upcomingAppointments = appointments.filter(apt => 
+        const upcomingAppointments = appointments && Array.isArray(appointments) && appointments.filter(apt => 
           new Date(apt.date) > new Date() && apt.status === 'scheduled'
         ).length;
-        const totalSpent = appointments.reduce((sum, apt) => 
+        const totalSpent = appointments && Array.isArray(appointments) && appointments.reduce((sum, apt) => 
           apt.status === 'completed' ? sum + (apt.consultationFee || 0) : sum, 0
         );
 
@@ -50,7 +50,7 @@ const Dashboard = () => {
         setNextAppointment(nextAppt);
 
         // Process recent activity
-        const activities = appointments.map(apt => ({
+        const activities = appointments && Array.isArray(appointments) && appointments.map(apt => ({
           id: apt._id,
           type: apt.status === 'cancelled' ? 'cancellation' : 
                 new Date(apt.date) > new Date() ? 'booking' : 'completion',
@@ -85,11 +85,11 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+            <div className="spinner h-12 w-12 mx-auto"></div>
+            <p className="mt-4 text-gray-600 text-responsive-base">Loading dashboard...</p>
           </div>
         </div>
       </div>
@@ -98,13 +98,13 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="text-red-600 mb-4">{error}</div>
+            <div className="text-red-600 mb-4 text-responsive-base">{error}</div>
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="btn-primary"
             >
               Retry
             </button>
@@ -152,48 +152,64 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <Link to="/find-clinics">
-            <Button variant="primary">Book New Appointment</Button>
-          </Link>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 space-y-4 sm:space-y-0">
+          <div className="animate-fade-in">
+            <h1 className="text-responsive-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-responsive-base text-gray-600">Welcome back, {currentUser?.firstName || 'User'}!</p>
+          </div>
+          <div className="animate-slide-up">
+            <Link to="/find-clinics">
+              <Button variant="primary" className="w-full sm:w-auto">
+                Book New Appointment
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <StatCard 
-            title="Total Appointments" 
-            value={stats.totalAppointments}
-            icon={<FaCalendarAlt className="h-6 w-6" />}
-            className="bg-white"
-          />
-          <StatCard 
-            title="Upcoming Appointments" 
-            value={stats.upcomingAppointments}
-            icon={<FaUserMd className="h-6 w-6" />}
-            className="bg-white"
-          />
-          <StatCard 
-            title="Total Spent" 
-            value={`$${stats.totalSpent}`}
-            icon={<FaMoneyBillWave className="h-6 w-6" />}
-            className="bg-white"
-          />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+          <div className="animate-slide-up">
+            <StatCard 
+              title="Total Appointments" 
+              value={stats.totalAppointments}
+              icon={<FaCalendarAlt className="h-6 w-6" />}
+              className="card-gradient"
+            />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <StatCard 
+              title="Upcoming Appointments" 
+              value={stats.upcomingAppointments}
+              icon={<FaUserMd className="h-6 w-6" />}
+              className="card-gradient"
+            />
+          </div>
+          <div className="animate-slide-up sm:col-span-2 lg:col-span-1" style={{ animationDelay: '0.2s' }}>
+            <StatCard 
+              title="Total Spent" 
+              value={`$${stats.totalSpent}`}
+              icon={<FaMoneyBillWave className="h-6 w-6" />}
+              className="card-gradient"
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Next Appointment</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="card animate-slide-up">
+              <h2 className="text-xl font-semibold mb-6 text-gray-900">Next Appointment</h2>
               {nextAppointment ? (
                 <AppointmentCard 
                   appointment={nextAppointment} 
                   onCancel={handleCancelAppointment}
                 />
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-4">No upcoming appointments</p>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FaCalendarAlt className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 mb-6 text-responsive-base">No upcoming appointments</p>
                   <Link to="/find-clinics">
                     <Button variant="primary">Book an Appointment</Button>
                   </Link>
@@ -201,16 +217,16 @@ const Dashboard = () => {
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              <h2 className="text-xl font-semibold mb-6 text-gray-900">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {quickActions.map((action, index) => (
-                  <Link key={index} to={action.link}>
+                  <Link key={index} to={action.link} className="group">
                     <Button 
                       variant={action.primary ? "primary" : "secondary"}
-                      className="w-full flex items-center justify-center"
+                      className="w-full flex items-center justify-center group-hover:scale-105 transition-transform duration-200"
                     >
-                      <span className="mr-2">{action.icon}</span>
+                      <span className="mr-2 text-lg">{action.icon}</span>
                       {action.label}
                     </Button>
                   </Link>
@@ -220,8 +236,8 @@ const Dashboard = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+            <div className="card animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              <h2 className="text-xl font-semibold mb-6 text-gray-900">Recent Activity</h2>
               {recentActivity.length > 0 ? (
                 <div className="space-y-4">
                   {recentActivity.map(activity => (
@@ -229,7 +245,12 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600 text-center py-4">No recent activity</p>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FaUserMd className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 text-responsive-sm">No recent activity</p>
+                </div>
               )}
             </div>
           </div>

@@ -42,6 +42,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/medical-records', require('./routes/medicalRecords'));
+app.use("/api/doctors", require("./routes/doctors"));
+app.use("/api/admin", require("./routes/admin"));
 // Add other routes as needed
 
 // Basic test route

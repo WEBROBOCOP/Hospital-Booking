@@ -44,20 +44,20 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4">
+    <nav className="bg-white shadow-lg sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center space-x-2">
-              <FaHeartbeat className="text-blue-400 text-2xl" />
-              <Link to="/" className="text-xl font-bold text-blue-600">
+              <FaHeartbeat className="text-blue-500 text-2xl animate-pulse" />
+              <Link to="/" className="text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors duration-200">
                 DoctorApp
               </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-8">
+            <div className="hidden lg:ml-6 lg:flex lg:items-center lg:space-x-8">
               <Link
                 to="/"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
                 onClick={() => setMobileOpen(false)}
               >
                 Home
@@ -66,44 +66,62 @@ export default function Navbar() {
                 <>
                   <Link
                     to="/dashboard"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
                     onClick={() => setMobileOpen(false)}
                   >
                     Dashboard
                   </Link>
                   <Link
                     to="/book"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
                     onClick={() => setMobileOpen(false)}
                   >
                     Book Appointment
                   </Link>
                   <Link
                     to="/appointments"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
                     onClick={() => setMobileOpen(false)}
                   >
                     My Appointments
                   </Link>
                   <Link
                     to="/find-clinics"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
                     onClick={() => setMobileOpen(false)}
                   >
                     Find Medical Facilities
                   </Link>
+                  {currentUser?.role === "doctor" && (
+                    <Link
+                      to="/doctor-dashboard"
+                      className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Doctor Dashboard
+                    </Link>
+                  )}
+                  {currentUser?.role === "admin" && (
+                    <Link
+                      to="/admin-dashboard"
+                      className="nav-link inline-flex items-center px-3 py-2 text-sm font-medium transition-all duration-200"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
                 </>
               )}
             </div>
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="hidden lg:ml-6 lg:flex lg:items-center">
             {currentUser ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 hover:bg-gray-50 px-3 py-2 transition-all duration-200"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
                     {currentUser.profilePicture ? (
                       <img
                         src={currentUser.profilePicture}
@@ -127,7 +145,7 @@ export default function Navbar() {
                     {currentUser.firstName || 'User'}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform ${
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
                       profileDropdownOpen ? 'rotate-180' : ''
                     }`}
                     fill="none"
@@ -139,10 +157,10 @@ export default function Navbar() {
                 </button>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-200 animate-fade-in">
                     <Link
                       to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       <div className="flex items-center space-x-2">
@@ -152,10 +170,10 @@ export default function Navbar() {
                         <span>My Profile</span>
                       </div>
                     </Link>
-                    <div className="border-t border-gray-100"></div>
+                    <div className="border-t border-gray-100 my-1"></div>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                     >
                       <div className="flex items-center space-x-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,23 +186,23 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex space-x-4">
+              <div className="flex space-x-3">
                 <Link
                   to="/login"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="btn-outline text-sm"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="btn-primary text-sm"
                 >
                   Sign Up
                 </Link>
               </div>
             )}
           </div>
-          <div className="-mr-2 flex items-center sm:hidden">
+          <div className="-mr-2 flex items-center lg:hidden">
             <button
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
@@ -206,11 +224,11 @@ export default function Navbar() {
           </div>
         </div>
         {mobileOpen && (
-          <div className="sm:hidden" id="mobile-menu">
-            <div className="pt-2 pb-3 space-y-1">
+          <div className="lg:hidden" id="mobile-menu">
+            <div className="pt-2 pb-3 space-y-1 bg-gray-50 rounded-lg mx-2 mb-2">
               <Link
                 to="/"
-                className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                className="block pl-3 pr-4 py-3 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-white hover:border-blue-500 hover:text-blue-600 transition-all duration-200 rounded-r-lg"
                 onClick={() => setMobileOpen(false)}
               >
                 Home
@@ -245,6 +263,24 @@ export default function Navbar() {
                   >
                     Find Medical Facilities
                   </Link>
+                  {currentUser?.role === "doctor" && (
+                    <Link
+                      to="/doctor-dashboard"
+                      className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Doctor Dashboard
+                    </Link>
+                  )}
+                  {currentUser?.role === "admin" && (
+                    <Link
+                      to="/admin-dashboard"
+                      className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <Link
                     to="/profile"
                     className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"

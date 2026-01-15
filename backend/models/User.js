@@ -40,6 +40,23 @@ const UserSchema = new mongoose.Schema({
     enum: ['patient', 'doctor', 'admin'],
     default: 'patient'
   },
+  // Patient-specific fields
+  assignedDoctor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  // Doctor-specific fields
+  facility: {
+    name: String,
+    address: String,
+    phone: String,
+    type: {
+      type: String,
+      enum: ["hospital", "clinic", "medical_center", "private_practice"]
+    }
+  },
+  specialty: String,
+  licenseNumber: String,
   dateOfBirth: {
     type: Date
   },
@@ -103,7 +120,7 @@ UserSchema.pre('save', async function(next) {
 
 // Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function() {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE
   });
 };

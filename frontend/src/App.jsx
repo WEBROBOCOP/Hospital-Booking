@@ -10,6 +10,8 @@ import Appointments from './pages/Appointments.jsx';
 import FindClinics from './pages/FindClinics.jsx';
 import Profile from './pages/Profile.jsx';
 import Contact from './pages/Contact.jsx';
+import DoctorDashboard from "./pages/DoctorDashboard.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 
 function App() {
@@ -62,6 +64,22 @@ function App() {
             }
           />
           <Route path="/contact" element={<Contact />} />
+          <Route
+            path="/doctor-dashboard"
+            element={
+              <ProtectedRoute>
+                <DoctorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
